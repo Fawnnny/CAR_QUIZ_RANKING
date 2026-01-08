@@ -1,3 +1,8 @@
+// 显示排行榜界面
+function showLeaderboard() {
+    loadLeaderboard(); // 调用加载排行榜数据的函数
+    showScreen('leaderboard'); // 切换到排行榜界面
+}
 // 游戏状态管理
 const GameState = {
     currentScreen: 'username',
