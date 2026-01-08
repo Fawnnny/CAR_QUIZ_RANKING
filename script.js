@@ -405,58 +405,53 @@ function displayAnswersReview() {
 }
 
 // 提交分数到排行榜
+// 提交分数到排行榜
 async function submitScoreToLeaderboard() {
     showLoading(true);
     
+    const scoreData = {
+        username: GameState.username,
+        score: GameState.score,
+        time: GameState.timeElapsed,
+        timestamp: Date.now()
+    };
+    
     try {
-        const scoreData = {
-            username: GameState.username,
-            score: GameState.score,
-            time: GameState.timeElapsed,
-            timestamp: Date.now()
-        };
+        console.log('正在提交分数到服务器:', scoreData);
+        // 关键：发送真实的POST请求到你的Cloudflare Function
+        const response = await fetch('/api/submit-score', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(scoreData)
+        });
         
-        // 在实际部署中，这里会调用Cloudflare Functions API
-        // 为了演示，我们模拟一个API调用
-        console.log('提交分数:', scoreData);
+        if (!response.ok) {
+            throw new Error(`提交失败! 状态码: ${response.status}`);
+        }
         
-        // 模拟API延迟
-        setTimeout(() => {
-            // 在实际应用中，这里会使用fetch调用API
-            // const response = await fetch('/api/submit-score', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify(scoreData)
-            // });
-            
-            // 模拟成功响应
-            const mockRank = Math.floor(Math.random() * 20) + 1;
-            document.getElementById('final-rank').textContent = mockRank;
-            
-            // 保存到本地存储（模拟）
-            saveScoreToLocalStorage(scoreData);
-            
-            showLoading(false);
-        }, 1000);
+        const result = await response.json();
+        console.log('服务器响应:', result);
+        
+        if (result.success) {
+            // 使用服务器计算并返回的真实排名
+            document.getElementById('final-rank').textContent = result.rank;
+            console.log(`最终排名: 第${result.rank}名`);
+        } else {
+            console.error('服务器返回错误:', result.error);
+            alert('提交成绩时出现错误，请稍后重试');
+        }
         
     } catch (error) {
-        console.error('提交分数失败:', error);
-        showLoading(false);
-        
-        // 保存到本地存储作为后备
-        const scoreData = {
-            username: GameState.username,
-            score: GameState.score,
-            time: GameState.timeElapsed,
-            timestamp: Date.now()
-        };
+        console.error('提交分数到排行榜失败:', error);
+        // 网络失败时的降级方案：保存到本地
+        alert('网络异常，成绩已保存到本地榜单');
         saveScoreToLocalStorage(scoreData);
-        
-        // 显示本地排名
-        const localRank = getLocalRank(scoreData.score, scoreData.time);
-        document.getElementById('final-rank').textContent = localRank;
+        const localRank = getLocalRank(GameState.score, GameState.timeElapsed);
+        document.getElementById('final-rank').textContent = localRank || '未上榜';
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -506,56 +501,55 @@ function getLocalRank(score, time) {
 }
 
 // 显示排行榜
+// 显示排行榜
 async function loadLeaderboard(filter = 'all') {
     showLoading(true);
     
     try {
-        // 在实际部署中，这里会调用Cloudflare Functions API
-        // 为了演示，我们模拟一个API调用
+        console.log('正在从服务器加载排行榜...');
+        // 关键：发送真实的GET请求到你的Cloudflare Function
+        const response = await fetch('/api/leaderboard');
         
-        // 模拟API延迟
-        setTimeout(() => {
-            // 在实际应用中，这里会使用fetch调用API
-            // const response = await fetch('/api/leaderboard');
-            // const leaderboardData = await response.json();
+        if (!response.ok) {
+            throw new Error(`加载失败! 状态码: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('排行榜数据加载成功:', result);
+        
+        if (result.success) {
+            let leaderboardData = result.leaderboard;
             
-            // 使用本地存储的数据作为演示
-            const localLeaderboard = JSON.parse(localStorage.getItem('quiz-leaderboard') || '[]');
-            
-            // 排序：分数降序，时间升序
-            const sortedLeaderboard = [...localLeaderboard].sort((a, b) => {
-                if (b.score !== a.score) {
-                    return b.score - a.score;
-                }
-                return a.time - b.time;
-            });
-            
-            // 应用筛选
-            let filteredLeaderboard = sortedLeaderboard;
+            // 前端筛选（如果需要）
             if (filter === 'top10') {
-                filteredLeaderboard = sortedLeaderboard.slice(0, 10);
+                leaderboardData = leaderboardData.slice(0, 10);
             }
             
             // 显示排行榜
-            displayLeaderboard(filteredLeaderboard);
+            displayLeaderboard(leaderboardData);
+            // 显示用户排名（传入完整数据用于查找）
+            displayUserRank(result.leaderboard);
             
-            // 显示用户排名
-            displayUserRank(sortedLeaderboard);
-            
-            showLoading(false);
-        }, 1000);
+        } else {
+            console.error('服务器返回错误:', result.error);
+            document.getElementById('leaderboard-list').innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>加载排行榜失败，请稍后重试</p>
+                </div>
+            `;
+        }
         
     } catch (error) {
         console.error('加载排行榜失败:', error);
-        showLoading(false);
-        
-        // 显示错误信息
         document.getElementById('leaderboard-list').innerHTML = `
             <div class="error-message">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p>加载排行榜失败，请稍后重试</p>
+                <p>加载排行榜失败，请检查网络连接</p>
             </div>
         `;
+    } finally {
+        showLoading(false);
     }
 }
 
