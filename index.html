@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新能源汽车智能网联答题闯关</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 用户名输入界面 -->
+        <div id="username-screen" class="screen active">
+            <div class="header">
+                <h1><i class="fas fa-car-battery"></i> 新能源汽车智能网联答题闯关</h1>
+                <p class="subtitle">测试你对新能源汽车智能网联技术的了解</p>
+            </div>
+            <div class="card">
+                <div class="card-content">
+                    <div class="icon-container">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <h2>请输入你的用户名</h2>
+                    <p class="description">用户名将用于排行榜显示，请使用独特的名称</p>
+                    <div class="input-group">
+                        <input type="text" id="username-input" placeholder="例如：新能源探索者" maxlength="20">
+                        <button id="username-submit" class="btn-primary">
+                            <i class="fas fa-arrow-right"></i> 开始冒险
+                        </button>
+                    </div>
+                    <div class="tip">
+                        <i class="fas fa-lightbulb"></i> 提示：用户名不能重复，如果重复将覆盖之前的成绩
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主界面 -->
+        <div id="main-screen" class="screen">
+            <header class="main-header">
+                <div class="logo">
+                    <i class="fas fa-bolt"></i>
+                    <span>智能网联挑战赛</span>
+                </div>
+                <div class="user-info">
+                    <i class="fas fa-user"></i>
+                    <span id="current-username">用户</span>
+                </div>
+            </header>
+
+            <div class="main-content">
+                <div class="welcome-card">
+                    <h1>欢迎回来，<span id="welcome-username">挑战者</span>！</h1>
+                    <p>准备好测试你对新能源汽车智能网联技术的知识了吗？</p>
+                    <div class="stats">
+                        <div class="stat">
+                            <i class="fas fa-question-circle"></i>
+                            <span>10道随机题目</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-stopwatch"></i>
+                            <span>计时挑战</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-trophy"></i>
+                            <span>荣耀排行榜</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="start-quiz" class="action-card start-card">
+                        <div class="action-icon">
+                            <i class="fas fa-play-circle"></i>
+                        </div>
+                        <h3>开始闯关</h3>
+                        <p>开始答题挑战，测试你的知识水平</p>
+                    </button>
+
+                    <button id="view-leaderboard" class="action-card leaderboard-card">
+                        <div class="action-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3>查看排行榜</h3>
+                        <p>查看所有挑战者的成绩排名</p>
+                    </button>
+                </div>
+
+                <div class="info-card">
+                    <h3><i class="fas fa-info-circle"></i> 游戏规则</h3>
+                    <ul>
+                        <li>每轮挑战包含<strong>10道随机题目</strong>，每题10分</li>
+                        <li>答题时间不限，但总用时会影响排名</li>
+                        <li>得分相同的情况下，<strong>用时更短</strong>的玩家排名更高</li>
+                        <li>排行榜上每个用户名只保留<strong>最佳成绩</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 答题界面 -->
+        <div id="quiz-screen" class="screen">
+            <header class="quiz-header">
+                <div class="quiz-header-left">
+                    <button id="back-to-main" class="btn-back">
+                        <i class="fas fa-arrow-left"></i> 返回
+                    </button>
+                    <div class="quiz-title">
+                        <h2>新能源汽车智能网联挑战</h2>
+                    </div>
+                </div>
+                <div class="quiz-stats">
+                    <div class="stat-box">
+                        <span class="stat-label">题目</span>
+                        <span id="question-counter" class="stat-value">1/10</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">得分</span>
+                        <span id="score-counter" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">用时</span>
+                        <span id="timer" class="stat-value">00:00</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="quiz-content">
+                <div id="question-container">
+                    <div class="question-card">
+                        <h2 id="question-text">题目内容</h2>
+                        <div id="options-container" class="options-container">
+                            <!-- 选项将通过JS动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quiz-navigation">
+                    <button id="prev-question" class="btn-secondary" disabled>
+                        <i class="fas fa-chevron-left"></i> 上一题
+                    </button>
+                    <button id="next-question" class="btn-primary">
+                        下一题 <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <button id="submit-quiz" class="btn-success">
+                        <i class="fas fa-paper-plane"></i> 提交答卷
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 排行榜界面 -->
+        <div id="leaderboard-screen" class="screen">
+            <header class="leaderboard-header">
+                <button id="back-from-leaderboard" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h1><i class="fas fa-crown"></i> 排行榜</h1>
+                <div class="header-actions">
+                    <button id="refresh-leaderboard" class="btn-secondary">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </header>
+
+            <div class="leaderboard-content">
+                <div class="leaderboard-filters">
+                    <div class="filter-option active" data-filter="all">
+                        <i class="fas fa-list"></i> 全部排名
+                    </div>
+                    <div class="filter-option" data-filter="top10">
+                        <i class="fas fa-trophy"></i> 前十名
+                    </div>
+                </div>
+
+                <div class="leaderboard-list-container">
+                    <div id="leaderboard-loading" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> 加载排行榜中...
+                    </div>
+                    <div id="leaderboard-list" class="leaderboard-list">
+                        <!-- 排行榜内容将通过JS动态生成 -->
+                    </div>
+                </div>
+
+                <div class="user-rank-card">
+                    <h3><i class="fas fa-user-check"></i> 我的排名</h3>
+                    <div id="user-rank-info" class="user-rank-info">
+                        <p>登录后查看您的排名</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结果界面 -->
+        <div id="result-screen" class="screen">
+            <div class="result-container">
+                <div class="result-header">
+                    <div class="result-icon">
+                        <i class="fas fa-award"></i>
+                    </div>
+                    <h1>挑战完成！</h1>
+                    <p id="result-message">你的成绩已经记录</p>
+                </div>
+
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <div class="stat-circle score-circle">
+                            <span id="final-score" class="stat-number">80</span>
+                            <span class="stat-label">得分</span>
+                        </div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="stat-circle time-circle">
+                            <span id="final-time" class="stat-number">02:30</span>
+                            <span class="stat-label">用时</span>
+                        </div>
+                    </div>
+                    <div class="result-stat">
+                        <div class="stat-circle rank-circle">
+                            <span id="final-rank" class="stat-number">5</span>
+                            <span class="stat-label">排名</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button id="view-result-leaderboard" class="btn-primary">
+                        <i class="fas fa-chart-line"></i> 查看完整排行榜
+                    </button>
+                    <button id="try-again" class="btn-secondary">
+                        <i class="fas fa-redo"></i> 再试一次
+                    </button>
+                    <button id="back-to-main-from-result" class="btn-secondary">
+                        <i class="fas fa-home"></i> 返回首页
+                    </button>
+                </div>
+
+                <div class="result-details">
+                    <h3><i class="fas fa-chart-bar"></i> 答题详情</h3>
+                    <div id="answers-review" class="answers-review">
+                        <!-- 答题详情将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载动画 -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p>加载中...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
