@@ -881,7 +881,7 @@ function checkAndTriggerAIPraise(rank) {
         if (rank === 1 || rank === 2 || rank === 3) {
             // 前三名：触发赞扬
             triggerAIPraise('praise', rank);
-        } else if (GameState.score < 20) {
+        } else if (GameState.score <= 20) {
             // 分数低于20：触发鼓励
             triggerAIPraise('encourage');
         } else {
@@ -905,9 +905,9 @@ async function triggerAIPraise(type, rank = null) {
         // 构建提示词
         let prompt = '';
         if (type === 'praise' && rank) {
-            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中获得了第${rank}名的好成绩！请以"知识守护者"的身份写一段热情洋溢的赞扬词，称赞他的专业知识和出色表现。要求：1. 包含用户的用户名 2. 提到他的排名成就 3. 鼓励他继续保持 4. 使用庄重但鼓舞人心的语气 5. 字数在100-150字之间`;
+            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中获得了第${rank}名的好成绩！请你写一段热情洋溢的赞扬诗，称赞他的专业知识和出色表现。要求：1. 包含用户的用户名，以用户的名字为诗歌逻辑 2. 提到他的排名成就 3. 鼓励他继续保持 4. 使用庄重但鼓舞人心的语气 5. 字数在100-150字之间`;
         } else if (type === 'encourage') {
-            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低，需要鼓励。请以"智慧导师"的身份写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力，并鼓励他继续学习和探索新能源汽车智能网联技术。要求：1. 包含用户的用户名 2. 强调学习过程的重要性 3. 提供积极的建议 4. 使用温暖而支持的语气 5. 字数在80-120字之间`;
+            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低，需要鼓励。请以作为吟游诗人，你应该以"智慧导师"的身份写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力，并鼓励他继续学习和探索新能源汽车智能网联技术。要求：1. 包含的用户名 2. 强调学习过程的重要性 3. 提供积极的建议 4. 使用温暖而支持的语气 5. 字数在80-120字之间`;
         }
         
         console.log('AI提示词:', prompt);
@@ -959,7 +959,7 @@ async function callAIApi(prompt) {
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。请用中文回复。'
+                            content: '你是一位路过的吟游诗人，擅长提供赞扬和鼓励。请用中文回复。**不要回复任何思考内容，直接发赞扬或鼓励内容。**'
                         },
                         {
                             role: 'user',
