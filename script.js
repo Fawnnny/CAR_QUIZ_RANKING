@@ -16,7 +16,9 @@ const GameState = {
     timeElapsed: 0,
     timerInterval: null,
     currentRank: null, // 新增：存储当前排名
-    questionScores: [] // 新增：存储每道题的得分情况
+    questionScores: [], // 新增：存储每道题的得分情况
+    previousHighScore: 0, // 新增：存储历史最高分
+    previousRank: null // 新增：存储历史最高排名
 };
 
 // DOM 元素
@@ -38,6 +40,9 @@ function init() {
         updateUsernameDisplay();
     }
     
+    // 加载用户历史数据
+    loadUserHistory();
+    
     // 设置事件监听器
     setupEventListeners();
     
@@ -46,6 +51,35 @@ function init() {
     
     // 预加载题库
     loadQuestions();
+}
+
+// 加载用户历史数据
+function loadUserHistory() {
+    const userHistory = JSON.parse(localStorage.getItem(`user-history-${GameState.username}`) || '{}');
+    if (userHistory.highScore) {
+        GameState.previousHighScore = userHistory.highScore;
+        GameState.previousRank = userHistory.highRank || null;
+    }
+}
+
+// 保存用户历史数据
+function saveUserHistory(score, rank) {
+    let userHistory = JSON.parse(localStorage.getItem(`user-history-${GameState.username}`) || '{}');
+    
+    // 如果当前分数比历史高分高，则更新
+    if (score > (userHistory.highScore || 0)) {
+        userHistory.highScore = score;
+        userHistory.highRank = rank;
+        GameState.previousHighScore = score;
+        GameState.previousRank = rank;
+    } else if (score === userHistory.highScore && rank < (userHistory.highRank || 99)) {
+        // 分数相同但排名更靠前
+        userHistory.highRank = rank;
+        GameState.previousRank = rank;
+    }
+    
+    // 保存到本地存储
+    localStorage.setItem(`user-history-${GameState.username}`, JSON.stringify(userHistory));
 }
 
 // 设置事件监听器
@@ -128,6 +162,8 @@ function submitUsername() {
     localStorage.setItem('quiz-username', username);
     showScreen('main');
     updateUsernameDisplay();
+    // 加载该用户的历史数据
+    loadUserHistory();
 }
 
 // 更新用户名显示
@@ -495,10 +531,14 @@ async function submitScoreToLeaderboard() {
             const finalRank = result.rank;
             document.getElementById('final-rank').textContent = finalRank;
             GameState.currentRank = finalRank; // 保存排名到状态
+            
+            // 保存用户历史数据
+            saveUserHistory(GameState.score, finalRank);
+            
             console.log(`最终排名: 第${finalRank}名`);
             
             // 检查是否需要触发AI赞扬（基于本次提交的分数和排名）
-            checkAndTriggerAIPraise(finalRank);
+            checkAndTriggerAIPraise(finalRank, result.leaderboard);
         } else {
             console.error('服务器返回错误:', result.error);
             alert('提交成绩时出现错误，请稍后重试');
@@ -513,9 +553,20 @@ async function submitScoreToLeaderboard() {
         document.getElementById('final-rank').textContent = localRank || '未上榜';
         GameState.currentRank = localRank; // 保存本地排名
         
+        // 保存用户历史数据
+        saveUserHistory(GameState.score, localRank);
+        
         // 即使网络失败，也检查是否需要触发AI赞扬
         if (localRank !== '未上榜') {
-            checkAndTriggerAIPraise(localRank);
+            // 获取本地排行榜数据
+            let localLeaderboard = JSON.parse(localStorage.getItem('quiz-leaderboard') || '[]');
+            localLeaderboard.sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                return a.time - b.time;
+            });
+            checkAndTriggerAIPraise(localRank, localLeaderboard);
         }
     } finally {
         showLoading(false);
@@ -871,19 +922,67 @@ function getDefaultQuestions() {
 // AI赞扬相关函数
 // ==============================================
 
-// 检查并触发AI赞扬（根据本次提交的排名）
-function checkAndTriggerAIPraise(rank) {
-    console.log('检查AI赞扬触发条件:', { rank, score: GameState.score });
+// 检查并触发AI赞扬（根据本次提交的排名和排行榜数据）
+function checkAndTriggerAIPraise(rank, leaderboardData = []) {
+    console.log('检查AI赞扬触发条件:', { 
+        rank, 
+        score: GameState.score,
+        previousHighScore: GameState.previousHighScore,
+        previousRank: GameState.previousRank
+    });
     
     // 只有当用户有有效排名时才检查
     if (rank && rank !== '未上榜') {
-        // 检查是否应该触发AI赞扬
-        if (rank === 1 || rank === 2 || rank === 3) {
-            // 前三名：触发赞扬
-            triggerAIPraise('praise', rank);
-        } else if (GameState.score <= 20) {
-            // 分数低于20：触发鼓励
-            triggerAIPraise('encourage');
+        // 获取排行榜中的前几名信息
+        let firstPlaceName = '';
+        let secondPlaceName = '';
+        let thirdPlaceName = '';
+        
+        if (leaderboardData.length >= 1) {
+            firstPlaceName = leaderboardData[0]?.username || '';
+        }
+        if (leaderboardData.length >= 2) {
+            secondPlaceName = leaderboardData[1]?.username || '';
+        }
+        if (leaderboardData.length >= 3) {
+            thirdPlaceName = leaderboardData[2]?.username || '';
+        }
+        
+        // 检查是否应该触发AI赞扬 - 扩展的条件逻辑
+        let triggerType = null;
+        let additionalData = {
+            firstPlaceName,
+            secondPlaceName,
+            thirdPlaceName
+        };
+        
+        // 条件1：历史排名很高但本次分数低（调侃）
+        if (GameState.previousRank && GameState.previousRank <= 10 && GameState.score < 60) {
+            triggerType = 'tease';
+        }
+        // 条件2：前三名
+        else if (rank === 1 || rank === 2 || rank === 3) {
+            triggerType = 'praise';
+        }
+        // 条件3：第4-10名
+        else if (rank <= 10) {
+            triggerType = 'good-rank';
+        }
+        // 条件4：分数很低（低于20分）
+        else if (GameState.score <= 20) {
+            triggerType = 'encourage';
+        }
+        // 条件5：分数中等但进步很大
+        else if (GameState.previousHighScore > 0 && GameState.score > GameState.previousHighScore + 20) {
+            triggerType = 'improvement';
+        }
+        // 条件6：分数及格但还有提升空间
+        else if (GameState.score >= 60 && GameState.score < 80) {
+            triggerType = 'passing';
+        }
+        
+        if (triggerType) {
+            triggerAIPraise(triggerType, rank, additionalData);
         } else {
             console.log('不满足AI赞扬触发条件');
         }
@@ -893,7 +992,7 @@ function checkAndTriggerAIPraise(rank) {
 }
 
 // 触发AI赞扬
-async function triggerAIPraise(type, rank = null) {
+async function triggerAIPraise(type, rank = null, additionalData = {}) {
     showLoading(true);
     
     try {
@@ -904,10 +1003,50 @@ async function triggerAIPraise(type, rank = null) {
         
         // 构建提示词 - 更加严格的指令
         let prompt = '';
+        const userName = GameState.username;
+        const score = GameState.score;
+        const firstPlaceName = additionalData.firstPlaceName || '';
+        const secondPlaceName = additionalData.secondPlaceName || '';
+        const thirdPlaceName = additionalData.thirdPlaceName || '';
+        
         if (type === 'praise' && rank) {
-            prompt = `用户"${GameState.username}"在新能源汽车智能网联技术知识竞赛中获得第${rank}名。请以吟游诗人的身份直接创作一首赞扬诗，不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名和排名，字数100-150字，风格庄重鼓舞。`;
+            if (rank === 1) {
+                // 第一名：庆祝胜利
+                prompt = `用户"${userName}"在新能源汽车智能网联技术知识竞赛中荣获第一名！请以吟游诗人的身份直接创作一首胜利赞歌，庆祝他的卓越成就。不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名和第一名成就，字数100-150字，风格庄重激昂。`;
+            } else if (rank === 2) {
+                // 第二名：挑战第一名
+                let challengeText = firstPlaceName ? `特别要向第一名${firstPlaceName}发起挑战，` : '';
+                prompt = `用户"${userName}"在新能源汽车智能网联技术知识竞赛中获得第二名！${challengeText}请以吟游诗人的身份直接创作一首激励诗歌，鼓舞他继续前进。不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名、第二名成就和挑战精神，字数100-150字，风格充满斗志。`;
+            } else if (rank === 3) {
+                // 第三名：追赶前两名
+                let competitionText = '';
+                if (firstPlaceName && secondPlaceName) {
+                    competitionText = `，前面是强大的对手${firstPlaceName}和${secondPlaceName}，`;
+                }
+                prompt = `用户"${userName}"在新能源汽车智能网联技术知识竞赛中获得第三名！${competitionText}请以吟游诗人的身份直接创作一首激励诗歌，肯定他的成就并鼓励继续进步。不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名、第三名成就和竞争意识，字数100-150字，风格积极向上。`;
+            }
+        } else if (type === 'good-rank') {
+            // 第4-10名：优秀表现
+            prompt = `用户"${userName}"在新能源汽车智能网联技术知识竞赛中获得第${rank}名，进入了前十强！请以吟游诗人的身份直接创作一首赞扬诗，肯定他的优秀表现。不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名和第${rank}名成就，字数100-150字，风格认可鼓励。`;
         } else if (type === 'encourage') {
-            prompt = `用户"${GameState.username}"在新能源汽车知识竞赛中得分较低。请以智慧导师的身份直接写一段鼓励语，不要有任何思考、分析或解释过程，直接输出最终的鼓励内容。要求：包含用户名，字数80-120字，风格温暖支持。`;
+            // 低分鼓励
+            prompt = `用户"${userName}"在新能源汽车知识竞赛中只得到${score}分，需要鼓励。请以智慧导师的身份直接写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力。不要有任何思考、分析或解释过程，直接输出最终的鼓励内容。要求：包含用户名和鼓励话语，字数80-120字，风格温暖支持。`;
+        } else if (type === 'tease') {
+            // 调侃：历史排名高但本次分数低
+            let teaseText = '';
+            if (GameState.previousRank && GameState.previousRank <= 3) {
+                teaseText = `作为曾经的第${GameState.previousRank}名高手，`;
+            } else if (GameState.previousRank && GameState.previousRank <= 10) {
+                teaseText = `作为曾经的前十强选手，`;
+            }
+            prompt = `用户"${userName}"${teaseText}这次在新能源汽车知识竞赛中只得到${score}分，排名第${rank}。请以幽默导师的身份直接写一段调侃式提醒，友善地督促他认真对待。不要有任何思考、分析或解释过程，直接输出最终的调侃内容。要求：包含用户名、历史成就对比和幽默提醒，字数80-120字，风格幽默友善。`;
+        } else if (type === 'improvement') {
+            // 进步显著
+            const improvement = score - GameState.previousHighScore;
+            prompt = `用户"${userName}"在新能源汽车知识竞赛中取得巨大进步！分数从${GameState.previousHighScore}分提高到${score}分，进步了${improvement}分！请以激励导师的身份直接写一段祝贺语，赞扬他的努力和进步。不要有任何思考、分析或解释过程，直接输出最终的祝贺内容。要求：包含用户名、进步数据和肯定话语，字数80-120字，风格热烈祝贺。`;
+        } else if (type === 'passing') {
+            // 及格但需努力
+            prompt = `用户"${userName}"在新能源汽车知识竞赛中得到${score}分，刚刚及格。请以严谨导师的身份直接写一段评价语，肯定他的及格成绩，同时指出还有提升空间。不要有任何思考、分析或解释过程，直接输出最终的评语内容。要求：包含用户名、分数评价和提升建议，字数80-120字，风格严谨鼓励。`;
         }
         
         console.log('AI提示词:', prompt);
@@ -921,7 +1060,7 @@ async function triggerAIPraise(type, rank = null) {
     } catch (error) {
         console.error('AI赞扬调用失败:', error);
         // 即使API调用失败，也显示备用文本弹窗
-        const fallbackText = getFallbackText();
+        const fallbackText = getFallbackText(type, rank, additionalData);
         showAIPraiseModal(fallbackText, type, rank);
     } finally {
         showLoading(false);
@@ -1083,42 +1222,88 @@ function cleanAIText(text) {
 }
 
 // 获取备用文本的函数
-function getFallbackText() {
+function getFallbackText(type = '', rank = null, additionalData = {}) {
     // 备用赞扬文本
     let fallbackTexts = [];
     const userName = GameState.username || '同学';
-    const isLowScore = GameState.score < 20;
-    const rank = GameState.currentRank;
+    const score = GameState.score;
+    const firstPlaceName = additionalData.firstPlaceName || '';
+    const secondPlaceName = additionalData.secondPlaceName || '';
+    const thirdPlaceName = additionalData.thirdPlaceName || '';
     
-    if (isLowScore) {
+    if (type === 'praise') {
+        if (rank === 1) {
+            fallbackTexts = [
+                `🏆 冠军${userName}！你在新能源汽车智能网联技术知识竞赛中勇夺第一！你的知识深度令人赞叹，展现了卓越的专业素养。继续保持这种王者风范！`,
+                `👑 第一名！${userName}，你是真正的知识王者！对新能源汽车技术的全面掌握让你稳坐榜首，为你骄傲！`,
+                `🌟 冠军荣耀属于${userName}！在激烈的竞争中脱颖而出，你的专业知识和敏捷思维令人印象深刻。继续领跑新能源汽车知识领域！`
+            ];
+        } else if (rank === 2) {
+            let challengeText = firstPlaceName ? `，下次一定要超越${firstPlaceName}！` : '，下次一定要冲击冠军！';
+            fallbackTexts = [
+                `🥈 第二名！${userName}，你的表现非常出色${challengeText}你的新能源汽车知识储备已经达到顶尖水平！`,
+                `⚡ ${userName}荣获第二名！距离冠军仅一步之遥，你的实力有目共睹。继续努力，下次定能登顶！`,
+                `🔝 ${userName}稳坐第二名宝座！你的专业知识和快速反应能力令人赞叹。保持这种势头，冠军就在眼前！`
+            ];
+        } else if (rank === 3) {
+            let competitionText = '';
+            if (firstPlaceName && secondPlaceName) {
+                competitionText = `，紧跟在${firstPlaceName}和${secondPlaceName}之后，`;
+            }
+            fallbackTexts = [
+                `🥉 第三名！${userName}${competitionText}你的新能源汽车智能网联技术知识非常扎实。继续前进，争取更高名次！`,
+                `🎯 ${userName}获得第三名！在强手如林的竞争中站稳脚跟，展现了你的专业实力。再接再厉，向更高目标迈进！`,
+                `💪 季军${userName}！你的知识掌握程度令人赞叹，排名前三实至名归。保持学习热情，未来可期！`
+            ];
+        }
+    } else if (type === 'good-rank') {
         fallbackTexts = [
-            `${userName}，虽然这次分数不高，但重要的是你迈出了学习的第一步！新能源汽车智能网联技术是一个新兴领域，保持好奇心，继续探索吧！`,
-            `别气馁，${userName}！每一次尝试都是成长的机会。新能源汽车技术日新月异，坚持学习定有收获！`,
-            `${userName}，感谢你的参与！分数不代表一切，重要的是你对新能源汽车技术的热情。继续加油！`
+            `🏅 ${userName}荣获第${rank}名，进入前十强！你在新能源汽车智能网联技术知识竞赛中的表现非常优秀，展现了扎实的专业基础！`,
+            `📈 第${rank}名！${userName}，你已经跻身知识竞赛的前列。继续努力，争取进入前三甲！`,
+            `✨ 恭喜${userName}获得第${rank}名！你的新能源汽车知识储备令人称赞，保持这种学习状态，成绩会越来越好！`
         ];
-    } else if (rank === 1) {
+    } else if (type === 'encourage') {
         fallbackTexts = [
-            `恭喜${userName}荣获第一名！你的知识储备令人惊叹，展现了卓越的学习能力。继续保持这种优秀的势头！`,
-            `太棒了，${userName}！第一名实至名归！你对新能源汽车智能网联技术的掌握程度令人印象深刻！`,
-            `冠军${userName}，你的表现堪称完美！继续在新能源汽车知识的海洋中遨游吧！`
+            `💫 ${userName}，虽然这次只得到${score}分，但重要的是你勇敢地参与了挑战！新能源汽车智能网联技术是一个充满机遇的领域，保持好奇心，继续探索！`,
+            `🌱 别灰心，${userName}！每一次尝试都是成长的养分。新能源汽车技术日新月异，坚持学习，你一定会越来越棒！`,
+            `🤝 ${userName}，感谢你的积极参与！分数只是暂时的，你对新能源汽车技术的热情才是最宝贵的。继续加油，下次会更好！`
         ];
-    } else if (rank === 2) {
+    } else if (type === 'tease') {
+        let teasePrefix = '';
+        if (GameState.previousRank === 1) {
+            teasePrefix = `曾经的冠军${userName}，`;
+        } else if (GameState.previousRank === 2) {
+            teasePrefix = `曾经的亚军${userName}，`;
+        } else if (GameState.previousRank === 3) {
+            teasePrefix = `曾经的季军${userName}，`;
+        } else if (GameState.previousRank && GameState.previousRank <= 10) {
+            teasePrefix = `曾经的前十强选手${userName}，`;
+        }
+        
         fallbackTexts = [
-            `恭喜${userName}获得第二名！非常优秀的成绩，你对新能源汽车智能网联技术的理解非常深入！`,
-            `第二名，${userName}！你的表现令人瞩目，继续努力，下次争取登顶！`,
-            `太出色了，${userName}！获得第二名证明了你的扎实基础和优秀能力！`
+            `😄 ${teasePrefix}这次只得了${score}分，是不是有点大意了？作为榜上有名的强者，要认真对待每一次挑战哦！`,
+            `🤔 ${userName}同学，你可是曾经的第${GameState.previousRank}名啊！这次${score}分可不符合你的实力水平。是不是昨晚没休息好？下次要全力以赴！`,
+            `🎭 喂，${userName}！排名第${rank}却只拿到${score}分，这分数和你的实力不匹配啊！是不是太轻敌了？作为优秀学生，要给其他人做好榜样！`
         ];
-    } else if (rank === 3) {
+    } else if (type === 'improvement') {
+        const improvement = score - GameState.previousHighScore;
         fallbackTexts = [
-            `恭喜${userName}获得第三名！优秀的成绩，你在新能源汽车知识领域的表现令人赞叹！`,
-            `第三名，${userName}！你的努力得到了回报，继续加油，未来可期！`,
-            `做得好，${userName}！第三名的成绩充分展现了你的学习能力和对新能源汽车技术的热情！`
+            `🚀 太棒了，${userName}！你的分数从${GameState.previousHighScore}分飞跃到${score}分，进步了整整${improvement}分！你的努力和坚持得到了回报！`,
+            `📊 惊人进步！${userName}，你的成绩提升了${improvement}分，这是你勤奋学习的最好证明。继续保持这种上升势头！`,
+            `💥 哇！${userName}，你的分数大幅提升${improvement}分！这充分展现了你的学习能力和进步潜力。为你感到骄傲！`
+        ];
+    } else if (type === 'passing') {
+        fallbackTexts = [
+            `✅ ${userName}，${score}分及格过关！这是一个不错的起点，但你的潜力远不止于此。继续深入学习，争取更高分数！`,
+            `🎓 恭喜${userName}通过测试！${score}分证明你已经掌握了基础知识，接下来可以向更高难度的挑战进发！`,
+            `📚 ${userName}获得${score}分，成功达标！这是一个良好的开端，继续努力，你的新能源汽车知识会越来越丰富！`
         ];
     } else {
+        // 默认，如果没有匹配类型，返回通用赞扬
         fallbackTexts = [
-            `太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
-            `恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
-            `做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
+            `🎉 太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
+            `👍 恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
+            `💡 做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
         ];
     }
     
@@ -1133,11 +1318,23 @@ function showAIPraiseModal(text, type, rank = null) {
     const title = document.getElementById('ai-praise-title');
     const praiseText = document.getElementById('ai-praise-text');
     
-    // 设置标题
-    if (type === 'praise' && rank) {
+    // 设置标题和图标
+    if (type === 'praise' && rank === 1) {
+        title.innerHTML = `<i class="fas fa-crown"></i> 冠军！`;
+    } else if (type === 'praise' && rank === 2) {
+        title.innerHTML = `<i class="fas fa-medal"></i> 亚军！`;
+    } else if (type === 'praise' && rank === 3) {
+        title.innerHTML = `<i class="fas fa-award"></i> 季军！`;
+    } else if (type === 'good-rank') {
         title.innerHTML = `<i class="fas fa-trophy"></i> 第${rank}名！`;
     } else if (type === 'encourage') {
-        title.innerHTML = `<i class="fas fa-heart"></i> 加油！`;
+        title.innerHTML = `<i class="fas fa-heart"></i> 加油鼓励！`;
+    } else if (type === 'tease') {
+        title.innerHTML = `<i class="fas fa-grin-wink"></i> 友善提醒`;
+    } else if (type === 'improvement') {
+        title.innerHTML = `<i class="fas fa-chart-line"></i> 巨大进步！`;
+    } else if (type === 'passing') {
+        title.innerHTML = `<i class="fas fa-check-circle"></i> 达标过关`;
     }
     
     // 设置赞扬文本
