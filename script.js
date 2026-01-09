@@ -902,12 +902,12 @@ async function triggerAIPraise(type, rank = null) {
         // 保存排名到全局状态，供备用文本使用
         GameState.currentRank = rank;
         
-        // 构建提示词
+        // 构建提示词 - 更加严格的指令
         let prompt = '';
         if (type === 'praise' && rank) {
-            prompt = `用户 "${GameState.username}" 。在新能源汽车智能网联技术知识竞赛中获得了第${rank}名的好成绩！请你写一段热情洋溢的赞扬诗，称赞他的专业知识和出色表现。**严禁输出思考过程，直接输出赞扬诗！**。要求：1. 包含用户的用户名，以用户的名字为诗歌逻辑 2. 提到他的排名成就 3. 鼓励他继续保持 4. 使用庄重但鼓舞人心的语气 5. 字数在100-150字之间`;
+            prompt = `用户"${GameState.username}"在新能源汽车智能网联技术知识竞赛中获得第${rank}名。请以吟游诗人的身份直接创作一首赞扬诗，不要有任何思考、分析或解释过程，直接输出最终的赞扬诗歌。要求：包含用户名和排名，字数100-150字，风格庄重鼓舞。`;
         } else if (type === 'encourage') {
-            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低，需要鼓励。作为吟游诗人，你应该以"智慧导师"的身份写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力，并鼓励他继续学习和探索新能源汽车智能网联技术。**严禁输出思考过程，直接输出鼓励语！**要求：1. 包含的用户名 2. 强调学习过程的重要性 3. 提供积极的建议 4. 使用温暖而支持的语气 5. 字数在80-120字之间`;
+            prompt = `用户"${GameState.username}"在新能源汽车知识竞赛中得分较低。请以智慧导师的身份直接写一段鼓励语，不要有任何思考、分析或解释过程，直接输出最终的鼓励内容。要求：包含用户名，字数80-120字，风格温暖支持。`;
         }
         
         console.log('AI提示词:', prompt);
@@ -931,31 +931,35 @@ async function triggerAIPraise(type, rank = null) {
 // 调用AI API的函数
 async function callAIApi(prompt) {
     try {
+        // 心流API信息
         const API_URL = 'https://apis.iflow.cn/v1/chat/completions';
         const API_KEY = 'sk-0b75784188f361cc59f3474ba175aa1d';
         
-        // 使用正确的模型名称
-        const model = 'deepseek-chat'; // 或者 'deepseek-r1'，根据API文档选择
-        
-        console.log(`使用模型: ${model}`);
-        
-        // 关键：使用更严格的提示词，要求直接输出内容
+        // 按照心流API官方示例格式
         const requestBody = {
-            model: model,
-            messages: [
+            "model": "deepseek-r1",
+            "messages": [
                 {
-                    role: 'system',
-                    content: '你是一位热情洋溢的吟游诗人，专门为用户的学习成就写赞扬诗。请记住：1. 直接输出赞扬诗/鼓励语，不要有任何思考过程 2. 不输出任何解释 3. 不输出"思考："、"我认为："等前缀 4. 输出后不要添加任何额外内容'
+                    "role": "system",
+                    "content": "你是一位吟游诗人和智慧导师，请直接输出最终的回答内容，不要包含任何思考过程、分析过程或解释说明。直接给出最终的诗歌或鼓励语。"
                 },
                 {
-                    role: 'user',
-                    content: prompt
+                    "role": "user",
+                    "content": prompt
                 }
             ],
-            temperature: 0.8,
-            max_tokens: 300,
-            stream: false // 确保非流式输出
+            "stream": false,
+            "max_tokens": 512,
+            "stop": ["null"],
+            "temperature": 0.7,
+            "top_p": 0.7,
+            "top_k": 50,
+            "frequency_penalty": 0.5,
+            "n": 1,
+            "response_format": { "type": "text" }
         };
+        
+        console.log('发送AI请求:', JSON.stringify(requestBody, null, 2));
         
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -968,117 +972,159 @@ async function callAIApi(prompt) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`API调用失败:`, errorText);
-            throw new Error(`API响应错误: ${response.status}`);
+            console.error('AI API请求失败:', response.status, errorText);
+            throw new Error(`API请求失败: ${response.status}`);
         }
         
         const data = await response.json();
         console.log('AI API完整响应:', data);
         
-        // 提取AI返回的文本
+        // 提取AI响应文本
+        let aiText = '';
+        
         if (data.choices && data.choices[0] && data.choices[0].message) {
-            let aiText = data.choices[0].message.content;
+            const message = data.choices[0].message;
             
-            // 清理可能的思考过程标记
-            aiText = cleanAIText(aiText);
+            // 优先使用 content 字段（最终答案）
+            if (message.content && message.content.trim()) {
+                aiText = message.content;
+                console.log('使用content字段:', aiText);
+            }
+            // 如果没有content但有reasoning_content，使用它（但清理思考过程）
+            else if (message.reasoning_content && message.reasoning_content.trim()) {
+                aiText = message.reasoning_content;
+                console.log('使用reasoning_content字段（需要清理）:', aiText);
+            }
             
-            console.log('清理后的AI文本:', aiText);
-            return aiText;
+            // 如果两个字段都没有或者都是空的，抛出错误
+            if (!aiText) {
+                console.error('两个内容字段都为空:', data);
+                throw new Error('AI响应内容为空');
+            }
+            
+            // 清理思考过程
+            const cleanedText = cleanAIText(aiText);
+            console.log('清理后内容:', cleanedText);
+            
+            return cleanedText;
         } else {
+            console.error('AI响应格式错误:', data);
             throw new Error('AI响应格式错误');
         }
         
     } catch (error) {
-        console.error('AI API调用失败:', error);
+        console.error('AI API调用失败，详细信息:', error);
+        
+        // 返回备用文本
         return getFallbackText();
     }
 }
 
-// 清理AI文本，去除思考过程
+// 清理AI文本，移除思考过程
 function cleanAIText(text) {
-    if (!text) return '';
+    if (!text) return text;
     
-    // 移除常见的思考过程标记
-    const thoughtPatterns = [
-        /^思考[:：]\s*/i,
-        /^推理[:：]\s*/i,
-        /^分析[:：]\s*/i,
-        /^想法[:：]\s*/i,
-        /^首先[，,]\s*/i,
-        /^让我们[来]?思考一下[，,]\s*/i,
-        /^用户.*?要求.*?以下.*?\n/i,
-        /^我需要.*?\n/i
+    // 常见思考过程模式
+    const patterns = [
+        // 用户说...用户要求...用户希望...
+        /用户(?:说|表示|要求|希望|提到|)[:：].*?[\n]/g,
+        /用户[\s\S]*?[:：].*?[\n]/g,
+        
+        // 让我想想...让我分析...我来思考...
+        /让我(?:想想|思考|分析|考虑|)[:：].*?[\n]/g,
+        /我(?:来|先|要|)(?:思考|分析|考虑|想想)[:：].*?[\n]/g,
+        
+        // 首先...其次...然后...最后...
+        /首先[，,].*?[\n]/g,
+        /其次[，,].*?[\n]/g,
+        /然后[，,].*?[\n]/g,
+        /最后[，,].*?[\n]/g,
+        /第一[，,].*?[\n]/g,
+        /第二[，,].*?[\n]/g,
+        /第三[，,].*?[\n]/g,
+        
+        // 思考过程标记
+        /思考[:：].*?[\n]/g,
+        /分析[:：].*?[\n]/g,
+        /理解[:：].*?[\n]/g,
+        
+        // 根据提示...根据要求...
+        /根据(?:提示|要求|题目|问题)[:：].*?[\n]/g,
+        
+        // 诗歌应该...赞扬应该...
+        /(?:诗歌|赞扬|鼓励)(?:应该|要|需要)[:：].*?[\n]/g,
+        
+        // 我来创作...我来写...
+        /我(?:来|将|要)(?:创作|写|创作一首|写一段)[:：].*?[\n]/g,
+        
+        // 思考内容...
+        /思考内容[:：].*?[\n]/g,
+        
+        // 分析一下...
+        /分析一下[，,].*?[\n]/g
     ];
     
-    let cleanedText = text;
+    let cleaned = text;
     
-    // 移除思考过程前缀
-    for (const pattern of thoughtPatterns) {
-        cleanedText = cleanedText.replace(pattern, '');
+    // 移除所有匹配的思考过程
+    patterns.forEach(pattern => {
+        cleaned = cleaned.replace(pattern, '');
+    });
+    
+    // 移除开头的空行和多余空格
+    cleaned = cleaned.trim();
+    
+    // 如果清理后为空，返回原文本
+    if (!cleaned) {
+        return text;
     }
     
-    // 如果文本包含"---"或"==="，取最后一部分
-    const sections = cleanedText.split(/[-=]{3,}/);
-    if (sections.length > 1) {
-        cleanedText = sections[sections.length - 1].trim();
-    }
-    
-    // 移除开头的空白行
-    cleanedText = cleanedText.replace(/^\s*\n+/, '');
-    
-    return cleanedText.trim();
+    return cleaned;
 }
 
-// 触发AI赞扬
-async function triggerAIPraise(type, rank = null) {
-    showLoading(true);
+// 获取备用文本的函数
+function getFallbackText() {
+    // 备用赞扬文本
+    let fallbackTexts = [];
+    const userName = GameState.username || '同学';
+    const isLowScore = GameState.score < 20;
+    const rank = GameState.currentRank;
     
-    try {
-        console.log(`触发AI赞扬，类型: ${type}, 排名: ${rank}, 用户名: ${GameState.username}, 分数: ${GameState.score}`);
-        
-        // 保存排名到全局状态
-        GameState.currentRank = rank;
-        
-        // 构建提示词 - 使用更严格的格式
-        let prompt = '';
-        if (type === 'praise' && rank) {
-            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中获得了第${rank}名，分数是${GameState.score}分。请直接创作一首赞扬诗，要求：
-1. 以用户${GameState.username}的名字为主题或开头
-2. 提及第${rank}名的成就
-3. 赞扬他对新能源汽车技术的掌握
-4. 鼓励他继续进步
-5. 使用诗歌格式，要有韵律感
-6. 字数在100字左右
-
-**重要：直接输出赞扬诗，不要有任何思考过程、解释或额外的文字！**`;
-        } else if (type === 'encourage') {
-            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低（${GameState.score}分），需要鼓励。请直接创作一段鼓励语，要求：
-1. 亲切地称呼用户${GameState.username}
-2. 肯定他的参与和勇气
-3. 鼓励他不要气馁，继续学习新能源汽车知识
-4. 表达对他未来进步的期待
-5. 使用温暖、支持的语气
-6. 字数在80-120字之间
-
-**重要：直接输出鼓励语，不要有任何思考过程、解释或额外的文字！**`;
-        }
-        
-        console.log('发送给AI的提示词:', prompt);
-        
-        // 调用AI API获取赞扬文本
-        const aiResponse = await callAIApi(prompt);
-        
-        // 显示AI赞扬弹窗
-        showAIPraiseModal(aiResponse, type, rank);
-        
-    } catch (error) {
-        console.error('AI赞扬调用失败:', error);
-        // 即使API调用失败，也显示备用文本弹窗
-        const fallbackText = getFallbackText();
-        showAIPraiseModal(fallbackText, type, rank);
-    } finally {
-        showLoading(false);
+    if (isLowScore) {
+        fallbackTexts = [
+            `${userName}，虽然这次分数不高，但重要的是你迈出了学习的第一步！新能源汽车智能网联技术是一个新兴领域，保持好奇心，继续探索吧！`,
+            `别气馁，${userName}！每一次尝试都是成长的机会。新能源汽车技术日新月异，坚持学习定有收获！`,
+            `${userName}，感谢你的参与！分数不代表一切，重要的是你对新能源汽车技术的热情。继续加油！`
+        ];
+    } else if (rank === 1) {
+        fallbackTexts = [
+            `恭喜${userName}荣获第一名！你的知识储备令人惊叹，展现了卓越的学习能力。继续保持这种优秀的势头！`,
+            `太棒了，${userName}！第一名实至名归！你对新能源汽车智能网联技术的掌握程度令人印象深刻！`,
+            `冠军${userName}，你的表现堪称完美！继续在新能源汽车知识的海洋中遨游吧！`
+        ];
+    } else if (rank === 2) {
+        fallbackTexts = [
+            `恭喜${userName}获得第二名！非常优秀的成绩，你对新能源汽车智能网联技术的理解非常深入！`,
+            `第二名，${userName}！你的表现令人瞩目，继续努力，下次争取登顶！`,
+            `太出色了，${userName}！获得第二名证明了你的扎实基础和优秀能力！`
+        ];
+    } else if (rank === 3) {
+        fallbackTexts = [
+            `恭喜${userName}获得第三名！优秀的成绩，你在新能源汽车知识领域的表现令人赞叹！`,
+            `第三名，${userName}！你的努力得到了回报，继续加油，未来可期！`,
+            `做得好，${userName}！第三名的成绩充分展现了你的学习能力和对新能源汽车技术的热情！`
+        ];
+    } else {
+        fallbackTexts = [
+            `太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
+            `恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
+            `做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
+        ];
     }
+    
+    // 随机选择一个备用文本
+    const randomIndex = Math.floor(Math.random() * fallbackTexts.length);
+    return fallbackTexts[randomIndex];
 }
 
 // 显示AI赞扬弹窗
@@ -1090,55 +1136,19 @@ function showAIPraiseModal(text, type, rank = null) {
     // 设置标题
     if (type === 'praise' && rank) {
         title.innerHTML = `<i class="fas fa-trophy"></i> 第${rank}名！`;
-        // 添加更醒目的样式
-        modal.classList.add('praise-type');
-        modal.classList.remove('encourage-type');
     } else if (type === 'encourage') {
         title.innerHTML = `<i class="fas fa-heart"></i> 加油！`;
-        modal.classList.add('encourage-type');
-        modal.classList.remove('praise-type');
     }
     
-    // 设置赞扬文本 - 确保文本干净
-    let displayText = text;
-    
-    // 再次清理文本
-    displayText = displayText
-        .replace(/^(赞扬诗|鼓励语|诗歌|评论)[:：]\s*/i, '') // 移除可能的标签
-        .replace(/^"|"$/g, '') // 移除可能的引号
-        .trim();
-    
-    // 如果文本仍然看起来像思考过程，使用备用文本
-    if (displayText.startsWith('思考') || displayText.startsWith('首先') || displayText.length < 20) {
-        displayText = getFallbackText();
-    }
-    
-    praiseText.innerHTML = formatTextWithLineBreaks(displayText);
+    // 设置赞扬文本
+    praiseText.textContent = text;
     
     // 显示弹窗
     modal.classList.add('active');
-}
-
-// 格式化文本，添加适当的换行
-function formatTextWithLineBreaks(text) {
-    if (!text) return '';
     
-    // 按句号、感叹号、问号分割
-    const sentences = text.split(/([。！？])/);
-    let result = '';
-    
-    for (let i = 0; i < sentences.length; i += 2) {
-        if (sentences[i]) {
-            result += sentences[i] + (sentences[i + 1] || '');
-            // 每两个句子换行
-            if (i + 2 < sentences.length) {
-                result += '<br><br>';
-            }
-        }
-    }
-    
-    return result;
-}
+    // 设置弹窗关闭事件
+    const closeBtn = document.getElementById('ai-modal-close-btn');
+    const closeIcon = document.querySelector('.ai-modal-close');
     
     const closeModal = () => {
         modal.classList.remove('active');
