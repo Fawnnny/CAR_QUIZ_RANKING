@@ -920,7 +920,7 @@ async function callAIApi(prompt) {
         
         // 构建请求体
         const requestBody = {
-            model: 'gpt-3.5-turbo',
+            model: 'deepseek-r1',
             messages: [
                 {
                     role: 'system',
