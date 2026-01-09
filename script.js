@@ -941,10 +941,7 @@ async function callAIApi(prompt) {
         
         // 尝试不同的模型名称
         const modelsToTry = [
-            'deepseek-r1',
-            'iflow-rome-30ba3b',
-            'qwen3-max',
-            'kimi-k2-0905'
+            'deepseek-r1'
         ];
         
         let aiText = '';
@@ -959,7 +956,7 @@ async function callAIApi(prompt) {
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一位路过的吟游诗人，擅长提供赞扬和鼓励。请用中文回复。**不要回复任何思考内容，直接发赞扬或鼓励内容。**'
+                            content: '你是一位路过的吟游诗人，擅长提供赞扬和鼓励。请用中文回复。**不要回复任何思考过程，直接发赞扬或鼓励内容。**'
                         },
                         {
                             role: 'user',
