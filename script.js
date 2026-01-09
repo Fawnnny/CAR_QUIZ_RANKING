@@ -15,7 +15,8 @@ const GameState = {
     startTime: 0,
     timeElapsed: 0,
     timerInterval: null,
-    currentRank: null // 新增：存储当前排名
+    currentRank: null, // 新增：存储当前排名
+    questionScores: [] // 新增：存储每道题的得分情况
 };
 
 // DOM 元素
@@ -173,6 +174,7 @@ function startQuiz() {
     GameState.currentQuestionIndex = 0;
     GameState.userAnswers = [];
     GameState.score = 0;  // 确保分数从0开始
+    GameState.questionScores = new Array(10).fill(0); // 初始化每道题的得分
     GameState.startTime = Date.now();
     GameState.timeElapsed = 0;
     GameState.currentRank = null; // 重置排名
@@ -257,30 +259,7 @@ function selectOption(optionIndex) {
         }
     });
     
-    // === 新增：实时计算并更新分数 ===
-    updateRealTimeScore();
-}
-
-// 实时更新分数
-function updateRealTimeScore() {
-    let currentScore = 0;
-    
-    // 遍历所有已回答的题目
-    for (let i = 0; i <= GameState.currentQuestionIndex; i++) {
-        const userAnswer = GameState.userAnswers[i];
-        if (userAnswer !== undefined) {
-            const question = GameState.quizData[i];
-            if (question && question.correct === userAnswer) {
-                currentScore += 10; // 每道题10分
-            }
-        }
-    }
-    
-    // 更新分数状态
-    GameState.score = currentScore;
-    
-    // 立即更新UI显示
-    document.getElementById('score-counter').textContent = currentScore;
+    // === 修改：不再实时计算分数，只在点击下一题时计算 ===
 }
 
 // 更新导航按钮状态
@@ -303,9 +282,7 @@ function prevQuestion() {
     if (GameState.currentQuestionIndex > 0) {
         GameState.currentQuestionIndex--;
         displayQuestion();
-        updateQuizUI(); // 这里会更新分数显示
-        // === 新增：返回上一题时也更新分数 ===
-        updateRealTimeScore();
+        updateQuizUI();
     }
 }
 
@@ -317,19 +294,54 @@ function nextQuestion() {
         return;
     }
     
-    // === 新增：在切换题目前更新分数 ===
-    updateRealTimeScore();
+    // === 修改：在切换到下一题前计算当前题目的得分 ===
+    calculateCurrentQuestionScore();
     
     if (GameState.currentQuestionIndex < GameState.quizData.length - 1) {
         GameState.currentQuestionIndex++;
         displayQuestion();
-        updateQuizUI(); // 这里会更新分数显示
+        updateQuizUI();
     } else {
         // 如果是最后一题，显示提交确认
         if (confirm('你已经完成了所有题目！是否要提交答卷？')) {
             submitQuiz();
         }
     }
+}
+
+// 计算当前题目的分数
+function calculateCurrentQuestionScore() {
+    const questionIndex = GameState.currentQuestionIndex;
+    const userAnswer = GameState.userAnswers[questionIndex];
+    
+    // 如果用户已经回答过这道题，才计算分数
+    if (userAnswer !== undefined) {
+        const question = GameState.quizData[questionIndex];
+        
+        // 检查答案是否正确
+        const isCorrect = question.correct === userAnswer;
+        
+        // 如果之前没有计算过这道题的分数，或者答案有变化，重新计算
+        if (GameState.questionScores[questionIndex] === 0) {
+            GameState.questionScores[questionIndex] = isCorrect ? 10 : 0;
+        }
+        
+        // 重新计算总分
+        updateTotalScore();
+    }
+}
+
+// 更新总分
+function updateTotalScore() {
+    // 计算所有题目的总分
+    let totalScore = 0;
+    for (let i = 0; i < GameState.questionScores.length; i++) {
+        totalScore += GameState.questionScores[i];
+    }
+    
+    // 更新游戏状态和UI
+    GameState.score = totalScore;
+    document.getElementById('score-counter').textContent = totalScore;
 }
 
 // 更新答题界面UI
@@ -363,23 +375,25 @@ function submitQuiz() {
         GameState.timerInterval = null;
     }
     
-    // 计算分数
+    // 计算最后一题的分数
+    calculateCurrentQuestionScore();
+    
+    // 计算总分
     calculateScore();
     
     // 显示结果界面
     showResults();
 }
 
-// 计算分数
+// 计算分数（最终提交时使用）
 function calculateScore() {
-    GameState.score = 0;
-    
-    GameState.quizData.forEach((question, index) => {
-        const userAnswer = GameState.userAnswers[index];
-        if (userAnswer !== undefined && question.correct === userAnswer) {
-            GameState.score += 10;
-        }
+    // 使用questionScores数组计算总分
+    let totalScore = 0;
+    GameState.questionScores.forEach(score => {
+        totalScore += score;
     });
+    
+    GameState.score = totalScore;
 }
 
 // 显示结果
@@ -885,6 +899,9 @@ async function triggerAIPraise(type, rank = null) {
     try {
         console.log(`触发AI赞扬，类型: ${type}, 排名: ${rank}, 用户名: ${GameState.username}, 分数: ${GameState.score}`);
         
+        // 保存排名到全局状态，供备用文本使用
+        GameState.currentRank = rank;
+        
         // 构建提示词
         let prompt = '';
         if (type === 'praise' && rank) {
@@ -903,7 +920,9 @@ async function triggerAIPraise(type, rank = null) {
         
     } catch (error) {
         console.error('AI赞扬调用失败:', error);
-        // 失败时不显示弹窗，不影响正常流程
+        // 即使API调用失败，也显示备用文本弹窗
+        const fallbackText = getFallbackText();
+        showAIPraiseModal(fallbackText, type, rank);
     } finally {
         showLoading(false);
     }
@@ -913,121 +932,133 @@ async function triggerAIPraise(type, rank = null) {
 async function callAIApi(prompt) {
     try {
         // === 这里填写你的心流API信息 ===
-        const API_URL = 'https://apis.iflow.cn/v1/chat/completions'; // 填写心流API的URL
-        const API_KEY = 'sk-0b75784188f361cc59f3474ba175aa1d'; // 填写心流API的密钥
+        // 根据你的错误信息，心流API不支持标准的gpt-3.5-turbo模型
+        // 你需要查看心流API文档，找到正确的模型名称和请求格式
         
-        console.log('正在调用AI API...', { prompt });
+        // 方法1：如果心流API使用不同的模型名称
+        const API_URL = 'https://apis.iflow.cn/v1/chat/completions';
+        const API_KEY = 'sk-0b75784188f361cc59f3474ba175aa1d';
         
-        // 构建请求体
-        const requestBody = {
-            model: 'deepseek-r1',
-            messages: [
-                {
-                    role: 'system',
-                    content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。请用中文回复。'
-                },
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ],
-            temperature: 0.7,
-            max_tokens: 200
-        };
+        // 尝试不同的模型名称
+        const modelsToTry = [
+            'deepseek-r1',
+            'iflow-rome-30ba3b',
+            'qwen3-max',
+            'kimi-k2-0905'
+        ];
         
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_KEY}`
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        console.log('API响应状态:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API错误响应:', errorText);
-            throw new Error(`AI API调用失败: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('完整的API响应:', data);
-        
-        // 根据心流API的实际响应结构提取文本
         let aiText = '';
         
-        // 尝试多种可能的响应格式
-        if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
-            // 格式1: 类似OpenAI的格式
-            const choice = data.choices[0];
-            if (choice.message && choice.message.content) {
-                aiText = choice.message.content;
-            } else if (choice.text) {
-                aiText = choice.text;
+        // 尝试不同的模型
+        for (const model of modelsToTry) {
+            try {
+                console.log(`尝试使用模型: ${model}`);
+                
+                const requestBody = {
+                    model: model,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。请用中文回复。'
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 200
+                };
+                
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.log(`模型 ${model} 失败:`, errorText);
+                    continue; // 尝试下一个模型
+                }
+                
+                const data = await response.json();
+                console.log(`模型 ${model} 响应:`, data);
+                
+                // 尝试提取文本
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    aiText = data.choices[0].message.content;
+                    console.log(`使用模型 ${model} 成功`);
+                    break; // 成功获取文本，退出循环
+                }
+            } catch (error) {
+                console.log(`模型 ${model} 调用失败:`, error);
+                continue;
             }
-        } 
-        // 格式2: 心流自定义格式
-        else if (data.result) {
-            aiText = data.result;
-        } else if (data.response) {
-            aiText = data.response;
-        } else if (data.data && data.data.text) {
-            aiText = data.data.text;
-        } else if (data.message) {
-            aiText = data.message;
-        } else if (data.answer) {
-            aiText = data.answer;
-        }
-        // 格式3: 直接返回文本
-        else if (typeof data === 'string') {
-            aiText = data;
-        }
-        else {
-            // 如果找不到标准格式，使用备用文本
-            console.warn('无法识别的API响应格式，使用备用文本');
-            aiText = `恭喜${GameState.username}完成挑战！你的表现非常出色！`;
         }
         
-        // 清理文本
-        aiText = aiText.trim();
-        
-        // 如果文本为空或出错，返回默认文本
+        // 如果所有模型都失败，使用备用文本
         if (!aiText) {
-            console.warn('AI返回了空文本，使用备用文本');
-            throw new Error('AI返回了空文本');
+            console.log('所有模型尝试失败，使用备用文本');
+            return getFallbackText();
         }
         
-        console.log('提取的AI文本:', aiText);
         return aiText;
         
     } catch (error) {
         console.error('AI API调用失败，详细信息:', error);
         
-        // 备用赞扬文本
-        let fallbackTexts = [];
-        const userName = GameState.username || '同学';
-        const isLowScore = GameState.score < 20;
-        
-        if (isLowScore) {
-            fallbackTexts = [
-                `${userName}，虽然这次分数不高，但重要的是你迈出了学习的第一步！新能源汽车智能网联技术是一个新兴领域，保持好奇心，继续探索吧！`,
-                `别气馁，${userName}！每一次尝试都是成长的机会。新能源汽车技术日新月异，坚持学习定有收获！`,
-                `${userName}，感谢你的参与！分数不代表一切，重要的是你对新能源汽车技术的热情。继续加油！`
-            ];
-        } else {
-            fallbackTexts = [
-                `太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
-                `恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
-                `做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
-            ];
-        }
-        
-        // 随机选择一个备用文本
-        const randomIndex = Math.floor(Math.random() * fallbackTexts.length);
-        return fallbackTexts[randomIndex];
+        // 返回备用文本
+        return getFallbackText();
     }
+}
+
+// 获取备用文本的函数
+function getFallbackText() {
+    // 备用赞扬文本
+    let fallbackTexts = [];
+    const userName = GameState.username || '同学';
+    const isLowScore = GameState.score < 20;
+    const rank = GameState.currentRank;
+    
+    if (isLowScore) {
+        fallbackTexts = [
+            `${userName}，虽然这次分数不高，但重要的是你迈出了学习的第一步！新能源汽车智能网联技术是一个新兴领域，保持好奇心，继续探索吧！`,
+            `别气馁，${userName}！每一次尝试都是成长的机会。新能源汽车技术日新月异，坚持学习定有收获！`,
+            `${userName}，感谢你的参与！分数不代表一切，重要的是你对新能源汽车技术的热情。继续加油！`
+        ];
+    } else if (rank === 1) {
+        fallbackTexts = [
+            `恭喜${userName}荣获第一名！你的知识储备令人惊叹，展现了卓越的学习能力。继续保持这种优秀的势头！`,
+            `太棒了，${userName}！第一名实至名归！你对新能源汽车智能网联技术的掌握程度令人印象深刻！`,
+            `冠军${userName}，你的表现堪称完美！继续在新能源汽车知识的海洋中遨游吧！`
+        ];
+    } else if (rank === 2) {
+        fallbackTexts = [
+            `恭喜${userName}获得第二名！非常优秀的成绩，你对新能源汽车智能网联技术的理解非常深入！`,
+            `第二名，${userName}！你的表现令人瞩目，继续努力，下次争取登顶！`,
+            `太出色了，${userName}！获得第二名证明了你的扎实基础和优秀能力！`
+        ];
+    } else if (rank === 3) {
+        fallbackTexts = [
+            `恭喜${userName}获得第三名！优秀的成绩，你在新能源汽车知识领域的表现令人赞叹！`,
+            `第三名，${userName}！你的努力得到了回报，继续加油，未来可期！`,
+            `做得好，${userName}！第三名的成绩充分展现了你的学习能力和对新能源汽车技术的热情！`
+        ];
+    } else {
+        fallbackTexts = [
+            `太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
+            `恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
+            `做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
+        ];
+    }
+    
+    // 随机选择一个备用文本
+    const randomIndex = Math.floor(Math.random() * fallbackTexts.length);
+    return fallbackTexts[randomIndex];
 }
 
 // 显示AI赞扬弹窗
