@@ -3,6 +3,7 @@ function showLeaderboard() {
     loadLeaderboard(); // 调用加载排行榜数据的函数
     showScreen('leaderboard'); // 切换到排行榜界面
 }
+
 // 游戏状态管理
 const GameState = {
     currentScreen: 'username',
@@ -37,6 +38,9 @@ function init() {
     
     // 设置事件监听器
     setupEventListeners();
+    
+    // 设置AI弹窗事件监听器
+    setupAIModalListeners();
     
     // 预加载题库
     loadQuestions();
@@ -136,23 +140,29 @@ function loadQuestions() {
     fetch('questions.json')
         .then(response => {
             if (!response.ok) {
-                throw new Error('Network response was not ok');
+                throw new Error(`HTTP错误! 状态码: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
+            // 核心修改：更宽松但有效的验证
+            if (data && data.questions && Array.isArray(data.questions)) {
                 GameState.quizData = data.questions;
-                console.log(`成功加载 ${data.questions.length} 道题目`);
+                console.log(`成功加载外部题库，共 ${data.questions.length} 道题目`);
+                // 可选：在控制台打印前几题的结构，确认数据正确
+                if (data.questions.length > 0) {
+                    console.log('题库数据结构示例:', JSON.stringify(data.questions[0]));
+                }
             } else {
-                throw new Error('题库格式不正确');
+                // 如果格式不对，抛出错误，让catch块处理
+                throw new Error('加载的JSON数据中未找到有效的questions数组');
             }
         })
         .catch(error => {
-            console.warn('加载题库失败，使用备用题库:', error);
+            console.warn(`加载外部题库失败: ${error.message}，将使用备用题库`);
             // 使用备用题库
             GameState.quizData = getDefaultQuestions();
-            console.log(`使用备用题库，共 ${GameState.quizData.length} 道题目`);
+            console.log(`已使用备用题库，共 ${GameState.quizData.length} 道题目`);
         });
 }
 
@@ -161,7 +171,7 @@ function startQuiz() {
     // 重置游戏状态
     GameState.currentQuestionIndex = 0;
     GameState.userAnswers = [];
-    GameState.score = 0;
+    GameState.score = 0;  // 确保分数从0开始
     GameState.startTime = Date.now();
     GameState.timeElapsed = 0;
     
@@ -209,8 +219,9 @@ function displayQuestion() {
     
     // 更新选项
     const optionsContainer = document.getElementById('options-container');
-    optionsContainer.innerHTML = '';
+    optionsContainer.innerHTML = ''; // 清空旧选项
     
+    // 关键修改：根据当前题目的 options 数组长度，动态创建按钮
     question.options.forEach((option, index) => {
         const optionElement = document.createElement('button');
         optionElement.className = 'option';
@@ -243,6 +254,31 @@ function selectOption(optionIndex) {
             option.classList.add('selected');
         }
     });
+    
+    // === 新增：实时计算并更新分数 ===
+    updateRealTimeScore();
+}
+
+// 实时更新分数
+function updateRealTimeScore() {
+    let currentScore = 0;
+    
+    // 遍历所有已回答的题目
+    for (let i = 0; i <= GameState.currentQuestionIndex; i++) {
+        const userAnswer = GameState.userAnswers[i];
+        if (userAnswer !== undefined) {
+            const question = GameState.quizData[i];
+            if (question && question.correct === userAnswer) {
+                currentScore += 10; // 每道题10分
+            }
+        }
+    }
+    
+    // 更新分数状态
+    GameState.score = currentScore;
+    
+    // 立即更新UI显示
+    document.getElementById('score-counter').textContent = currentScore;
 }
 
 // 更新导航按钮状态
@@ -265,7 +301,9 @@ function prevQuestion() {
     if (GameState.currentQuestionIndex > 0) {
         GameState.currentQuestionIndex--;
         displayQuestion();
-        updateQuizUI();
+        updateQuizUI(); // 这里会更新分数显示
+        // === 新增：返回上一题时也更新分数 ===
+        updateRealTimeScore();
     }
 }
 
@@ -277,10 +315,13 @@ function nextQuestion() {
         return;
     }
     
+    // === 新增：在切换题目前更新分数 ===
+    updateRealTimeScore();
+    
     if (GameState.currentQuestionIndex < GameState.quizData.length - 1) {
         GameState.currentQuestionIndex++;
         displayQuestion();
-        updateQuizUI();
+        updateQuizUI(); // 这里会更新分数显示
     } else {
         // 如果是最后一题，显示提交确认
         if (confirm('你已经完成了所有题目！是否要提交答卷？')) {
@@ -360,18 +401,21 @@ function showResults() {
     
     // 提交分数到排行榜
     submitScoreToLeaderboard();
+    
+    // === 新增：根据成绩触发AI赞扬 ===
+    checkAndTriggerAIPraise();
 }
 
 // 获取结果消息
 function getResultMessage(score) {
     if (score >= 90) {
-        return "太棒了！你对新能源汽车智能网联技术非常了解！";
+        return "太棒了！你对本门课程的掌握非常好！";
     } else if (score >= 70) {
-        return "不错！你对新能源汽车智能网联技术有较好的了解！";
+        return "不错！你的表现较好！";
     } else if (score >= 50) {
-        return "还可以，但对新能源汽车智能网联技术还需要更多了解！";
+        return "还可以，但以后还要认真听课呀！";
     } else {
-        return "需要加强对新能源汽车智能网联技术的学习！";
+        return "以后还需要加强的学习！";
     }
 }
 
@@ -802,5 +846,156 @@ function getDefaultQuestions() {
     ];
 }
 
+// AI赞扬相关函数
+// ==============================================
+
+// 检查并触发AI赞扬
+async function checkAndTriggerAIPraise() {
+    // 等待一小段时间确保排行榜数据已更新
+    setTimeout(async () => {
+        try {
+            // 从服务器获取最新的排行榜数据
+            const response = await fetch('/api/leaderboard');
+            const result = await response.json();
+            
+            if (result.success) {
+                const leaderboardData = result.leaderboard;
+                
+                // 查找当前用户的排名
+                const userRank = leaderboardData.findIndex(entry => 
+                    entry.username === GameState.username && 
+                    entry.score === GameState.score && 
+                    entry.time === GameState.timeElapsed
+                ) + 1;
+                
+                // 检查是否应该触发AI赞扬
+                if (userRank === 1 || userRank === 2 || userRank === 3) {
+                    // 前三名：触发赞扬
+                    await triggerAIPraise('praise', userRank);
+                } else if (GameState.score < 20) {
+                    // 分数低于20：触发鼓励
+                    await triggerAIPraise('encourage');
+                }
+                // 其他情况不触发
+            }
+        } catch (error) {
+            console.log('获取排行榜数据失败，跳过AI赞扬:', error);
+        }
+    }, 1000); // 延迟1秒确保数据同步
+}
+
+// 触发AI赞扬
+async function triggerAIPraise(type, rank = null) {
+    showLoading(true);
+    
+    try {
+        console.log(`触发AI赞扬，类型: ${type}, 排名: ${rank}, 用户名: ${GameState.username}`);
+        
+        // 构建提示词
+        let prompt = '';
+        if (type === 'praise' && rank) {
+            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中获得了第${rank}名的好成绩！请以"知识守护者"的身份写一段热情洋溢的赞扬词，称赞他的专业知识和出色表现。要求：1. 包含用户的用户名 2. 提到他的排名成就 3. 鼓励他继续保持 4. 使用庄重但鼓舞人心的语气 5. 字数在100-150字之间`;
+        } else if (type === 'encourage') {
+            prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低，需要鼓励。请以"智慧导师"的身份写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力，并鼓励他继续学习和探索新能源汽车智能网联技术。要求：1. 包含用户的用户名 2. 强调学习过程的重要性 3. 提供积极的建议 4. 使用温暖而支持的语气 5. 字数在80-120字之间`;
+        }
+        
+        // === 这里是你需要填写的心流API调用代码 ===
+        // 调用AI API获取赞扬文本
+        const aiResponse = await callAIApi(prompt);
+        
+        // 显示AI赞扬弹窗
+        showAIPraiseModal(aiResponse, type, rank);
+        
+    } catch (error) {
+        console.error('AI赞扬调用失败:', error);
+        // 失败时不显示弹窗，不影响正常流程
+    } finally {
+        showLoading(false);
+    }
+}
+
+// 调用AI API的函数（需要你填写具体实现）
+async function callAIApi(prompt) {
+    // ==============================================
+    // 这里是你需要填写的心流API调用代码
+    // 示例结构（根据实际API文档调整）：
+  
+    const response = await fetch('https://apis.iflow.cn/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'sk-0b75784188f361cc59f3474ba175aa1d' // 如果有的话
+        },
+        body: JSON.stringify({
+            model: 'deepseek-r1',
+            messages: [
+                {
+                    role: 'system',
+                    content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。'
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 200
+        })
+    });
+    
+    const data = await response.json();
+    return data.choices[0].message.content;
+   
+    
+    // 临时示例文本（实际使用时请替换为API调用）
+    return `亲爱的${GameState.username}，你的表现非常出色！你在新能源汽车智能网联技术领域的知识令人印象深刻。继续努力，知识的力量将引领你走向更广阔的未来！`;
+    // ==============================================
+}
+
+// 显示AI赞扬弹窗
+function showAIPraiseModal(text, type, rank = null) {
+    const modal = document.getElementById('ai-praise-modal');
+    const title = document.getElementById('ai-praise-title');
+    const praiseText = document.getElementById('ai-praise-text');
+    
+    // 设置标题
+    if (type === 'praise' && rank) {
+        title.innerHTML = `<i class="fas fa-trophy"></i> 第${rank}名！`;
+    } else if (type === 'encourage') {
+        title.innerHTML = `<i class="fas fa-heart"></i> 加油！`;
+    }
+    
+    // 设置赞扬文本
+    praiseText.textContent = text;
+    
+    // 显示弹窗
+    modal.classList.add('active');
+    
+    // 设置弹窗关闭事件
+    const closeBtn = document.getElementById('ai-modal-close-btn');
+    const closeIcon = document.querySelector('.ai-modal-close');
+    
+    const closeModal = () => {
+        modal.classList.remove('active');
+        // 清除事件监听器
+        closeBtn.removeEventListener('click', closeModal);
+        closeIcon.removeEventListener('click', closeModal);
+    };
+    
+    closeBtn.addEventListener('click', closeModal);
+    closeIcon.addEventListener('click', closeModal);
+}
+
+// 在初始化时设置AI弹窗事件监听器
+function setupAIModalListeners() {
+    const modal = document.getElementById('ai-praise-modal');
+    
+    // 点击模态框背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.remove('active');
+        }
+    });
+}
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', init);

@@ -8,6 +8,31 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
+<!-- AI赞扬弹窗 -->
+<div id="ai-praise-modal" class="ai-modal">
+    <div class="ai-modal-content">
+        <div class="ai-modal-header">
+            <h2>
+                <i class="fas fa-crown"></i>
+                <span id="ai-praise-title">恭喜你！</span>
+            </h2>
+            <button class="ai-modal-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ai-modal-body">
+            <div class="ai-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="ai-praise-text" id="ai-praise-text">
+                <!-- AI生成的赞扬文本将显示在这里 -->
+            </div>
+        </div>
+        <div class="ai-modal-footer">
+            <button class="btn-primary" id="ai-modal-close-btn">继续</button>
+        </div>
+    </div>
+</div>
 <body>
     <div class="container">
         <!-- 用户名输入界面 -->
