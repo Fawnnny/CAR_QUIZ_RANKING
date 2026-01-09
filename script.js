@@ -14,7 +14,8 @@ const GameState = {
     score: 0,
     startTime: 0,
     timeElapsed: 0,
-    timerInterval: null
+    timerInterval: null,
+    currentRank: null // 新增：存储当前排名
 };
 
 // DOM 元素
@@ -174,6 +175,7 @@ function startQuiz() {
     GameState.score = 0;  // 确保分数从0开始
     GameState.startTime = Date.now();
     GameState.timeElapsed = 0;
+    GameState.currentRank = null; // 重置排名
     
     // 清除之前的计时器
     if (GameState.timerInterval) {
@@ -401,9 +403,6 @@ function showResults() {
     
     // 提交分数到排行榜
     submitScoreToLeaderboard();
-    
-    // === 新增：根据成绩触发AI赞扬 ===
-    checkAndTriggerAIPraise();
 }
 
 // 获取结果消息
@@ -449,7 +448,6 @@ function displayAnswersReview() {
 }
 
 // 提交分数到排行榜
-// 提交分数到排行榜
 async function submitScoreToLeaderboard() {
     showLoading(true);
     
@@ -480,8 +478,13 @@ async function submitScoreToLeaderboard() {
         
         if (result.success) {
             // 使用服务器计算并返回的真实排名
-            document.getElementById('final-rank').textContent = result.rank;
-            console.log(`最终排名: 第${result.rank}名`);
+            const finalRank = result.rank;
+            document.getElementById('final-rank').textContent = finalRank;
+            GameState.currentRank = finalRank; // 保存排名到状态
+            console.log(`最终排名: 第${finalRank}名`);
+            
+            // 检查是否需要触发AI赞扬（基于本次提交的分数和排名）
+            checkAndTriggerAIPraise(finalRank);
         } else {
             console.error('服务器返回错误:', result.error);
             alert('提交成绩时出现错误，请稍后重试');
@@ -494,6 +497,12 @@ async function submitScoreToLeaderboard() {
         saveScoreToLocalStorage(scoreData);
         const localRank = getLocalRank(GameState.score, GameState.timeElapsed);
         document.getElementById('final-rank').textContent = localRank || '未上榜';
+        GameState.currentRank = localRank; // 保存本地排名
+        
+        // 即使网络失败，也检查是否需要触发AI赞扬
+        if (localRank !== '未上榜') {
+            checkAndTriggerAIPraise(localRank);
+        }
     } finally {
         showLoading(false);
     }
@@ -544,7 +553,6 @@ function getLocalRank(score, time) {
     return userIndex !== -1 ? userIndex + 1 : '未上榜';
 }
 
-// 显示排行榜
 // 显示排行榜
 async function loadLeaderboard(filter = 'all') {
     showLoading(true);
@@ -849,39 +857,25 @@ function getDefaultQuestions() {
 // AI赞扬相关函数
 // ==============================================
 
-// 检查并触发AI赞扬
-async function checkAndTriggerAIPraise() {
-    // 等待一小段时间确保排行榜数据已更新
-    setTimeout(async () => {
-        try {
-            // 从服务器获取最新的排行榜数据
-            const response = await fetch('/api/leaderboard');
-            const result = await response.json();
-            
-            if (result.success) {
-                const leaderboardData = result.leaderboard;
-                
-                // 查找当前用户的排名
-                const userRank = leaderboardData.findIndex(entry => 
-                    entry.username === GameState.username && 
-                    entry.score === GameState.score && 
-                    entry.time === GameState.timeElapsed
-                ) + 1;
-                
-                // 检查是否应该触发AI赞扬
-                if (userRank === 1 || userRank === 2 || userRank === 3) {
-                    // 前三名：触发赞扬
-                    await triggerAIPraise('praise', userRank);
-                } else if (GameState.score < 20) {
-                    // 分数低于20：触发鼓励
-                    await triggerAIPraise('encourage');
-                }
-                // 其他情况不触发
-            }
-        } catch (error) {
-            console.log('获取排行榜数据失败，跳过AI赞扬:', error);
+// 检查并触发AI赞扬（根据本次提交的排名）
+function checkAndTriggerAIPraise(rank) {
+    console.log('检查AI赞扬触发条件:', { rank, score: GameState.score });
+    
+    // 只有当用户有有效排名时才检查
+    if (rank && rank !== '未上榜') {
+        // 检查是否应该触发AI赞扬
+        if (rank === 1 || rank === 2 || rank === 3) {
+            // 前三名：触发赞扬
+            triggerAIPraise('praise', rank);
+        } else if (GameState.score < 20) {
+            // 分数低于20：触发鼓励
+            triggerAIPraise('encourage');
+        } else {
+            console.log('不满足AI赞扬触发条件');
         }
-    }, 1000); // 延迟1秒确保数据同步
+    } else {
+        console.log('用户未上榜，不触发AI赞扬');
+    }
 }
 
 // 触发AI赞扬
@@ -889,7 +883,7 @@ async function triggerAIPraise(type, rank = null) {
     showLoading(true);
     
     try {
-        console.log(`触发AI赞扬，类型: ${type}, 排名: ${rank}, 用户名: ${GameState.username}`);
+        console.log(`触发AI赞扬，类型: ${type}, 排名: ${rank}, 用户名: ${GameState.username}, 分数: ${GameState.score}`);
         
         // 构建提示词
         let prompt = '';
@@ -899,7 +893,8 @@ async function triggerAIPraise(type, rank = null) {
             prompt = `用户 "${GameState.username}" 在新能源汽车智能网联技术知识竞赛中得分较低，需要鼓励。请以"智慧导师"的身份写一段温暖而鼓舞人心的鼓励语，肯定他的参与和努力，并鼓励他继续学习和探索新能源汽车智能网联技术。要求：1. 包含用户的用户名 2. 强调学习过程的重要性 3. 提供积极的建议 4. 使用温暖而支持的语气 5. 字数在80-120字之间`;
         }
         
-        // === 这里是你需要填写的心流API调用代码 ===
+        console.log('AI提示词:', prompt);
+        
         // 调用AI API获取赞扬文本
         const aiResponse = await callAIApi(prompt);
         
@@ -914,24 +909,22 @@ async function triggerAIPraise(type, rank = null) {
     }
 }
 
-// 调用AI API的函数（需要你填写具体实现）
+// 调用AI API的函数
 async function callAIApi(prompt) {
-    // ==============================================
-    // 这里是你需要填写的心流API调用代码
-    // 示例结构（根据实际API文档调整）：
-  
-    const response = await fetch('https://apis.iflow.cn/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'sk-0b75784188f361cc59f3474ba175aa1d' // 如果有的话
-        },
-        body: JSON.stringify({
-            model: 'deepseek-r1',
+    try {
+        // === 这里填写你的心流API信息 ===
+        const API_URL = 'https://apis.iflow.cn/v1/chat/completions'; // 填写心流API的URL
+        const API_KEY = 'sk-0b75784188f361cc59f3474ba175aa1d'; // 填写心流API的密钥
+        
+        console.log('正在调用AI API...', { prompt });
+        
+        // 构建请求体
+        const requestBody = {
+            model: 'gpt-3.5-turbo',
             messages: [
                 {
                     role: 'system',
-                    content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。'
+                    content: '你是一位知识竞赛的智能助手，专门为用户提供赞扬和鼓励。请用中文回复。'
                 },
                 {
                     role: 'user',
@@ -940,16 +933,101 @@ async function callAIApi(prompt) {
             ],
             temperature: 0.7,
             max_tokens: 200
-        })
-    });
-    
-    const data = await response.json();
-    return data.choices[0].message.content;
-   
-    
-    // 临时示例文本（实际使用时请替换为API调用）
-    return `亲爱的${GameState.username}，你的表现非常出色！你在新能源汽车智能网联技术领域的知识令人印象深刻。继续努力，知识的力量将引领你走向更广阔的未来！`;
-    // ==============================================
+        };
+        
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_KEY}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        console.log('API响应状态:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API错误响应:', errorText);
+            throw new Error(`AI API调用失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('完整的API响应:', data);
+        
+        // 根据心流API的实际响应结构提取文本
+        let aiText = '';
+        
+        // 尝试多种可能的响应格式
+        if (data.choices && Array.isArray(data.choices) && data.choices.length > 0) {
+            // 格式1: 类似OpenAI的格式
+            const choice = data.choices[0];
+            if (choice.message && choice.message.content) {
+                aiText = choice.message.content;
+            } else if (choice.text) {
+                aiText = choice.text;
+            }
+        } 
+        // 格式2: 心流自定义格式
+        else if (data.result) {
+            aiText = data.result;
+        } else if (data.response) {
+            aiText = data.response;
+        } else if (data.data && data.data.text) {
+            aiText = data.data.text;
+        } else if (data.message) {
+            aiText = data.message;
+        } else if (data.answer) {
+            aiText = data.answer;
+        }
+        // 格式3: 直接返回文本
+        else if (typeof data === 'string') {
+            aiText = data;
+        }
+        else {
+            // 如果找不到标准格式，使用备用文本
+            console.warn('无法识别的API响应格式，使用备用文本');
+            aiText = `恭喜${GameState.username}完成挑战！你的表现非常出色！`;
+        }
+        
+        // 清理文本
+        aiText = aiText.trim();
+        
+        // 如果文本为空或出错，返回默认文本
+        if (!aiText) {
+            console.warn('AI返回了空文本，使用备用文本');
+            throw new Error('AI返回了空文本');
+        }
+        
+        console.log('提取的AI文本:', aiText);
+        return aiText;
+        
+    } catch (error) {
+        console.error('AI API调用失败，详细信息:', error);
+        
+        // 备用赞扬文本
+        let fallbackTexts = [];
+        const userName = GameState.username || '同学';
+        const isLowScore = GameState.score < 20;
+        
+        if (isLowScore) {
+            fallbackTexts = [
+                `${userName}，虽然这次分数不高，但重要的是你迈出了学习的第一步！新能源汽车智能网联技术是一个新兴领域，保持好奇心，继续探索吧！`,
+                `别气馁，${userName}！每一次尝试都是成长的机会。新能源汽车技术日新月异，坚持学习定有收获！`,
+                `${userName}，感谢你的参与！分数不代表一切，重要的是你对新能源汽车技术的热情。继续加油！`
+            ];
+        } else {
+            fallbackTexts = [
+                `太棒了，${userName}！你在新能源汽车智能网联技术知识竞赛中表现出色！`,
+                `恭喜你，${userName}！你的知识储备令人印象深刻，继续在新能源汽车领域发光发热！`,
+                `做得好，${userName}！你对新能源汽车智能网联技术的理解非常深入，为你点赞！`
+            ];
+        }
+        
+        // 随机选择一个备用文本
+        const randomIndex = Math.floor(Math.random() * fallbackTexts.length);
+        return fallbackTexts[randomIndex];
+    }
 }
 
 // 显示AI赞扬弹窗
@@ -997,5 +1075,6 @@ function setupAIModalListeners() {
         }
     });
 }
+
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', init);
