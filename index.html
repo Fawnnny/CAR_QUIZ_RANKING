@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>新能源汽车智能网联答题闯关</title>
+    <title>新能源汽车学院 - 游戏化学习平台</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <!-- AI赞扬弹窗 -->
 <div id="ai-praise-modal" class="ai-modal">
@@ -38,24 +38,24 @@
         <!-- 用户名输入界面 -->
         <div id="username-screen" class="screen active">
             <div class="header">
-                <h1><i class="fas fa-car-battery"></i> 新能源汽车智能网联答题闯关</h1>
-                <p class="subtitle">测试你对新能源汽车智能网联技术的了解</p>
+                <h1><i class="fas fa-car-battery"></i> 新能源汽车学院</h1>
+                <p class="subtitle">游戏化学习平台 - 开启你的新能源汽车学习之旅</p>
             </div>
             <div class="card">
                 <div class="card-content">
                     <div class="icon-container">
-                        <i class="fas fa-user-circle"></i>
+                        <i class="fas fa-graduation-cap"></i>
                     </div>
-                    <h2>请输入你的用户名</h2>
-                    <p class="description">用户名将用于排行榜显示，请使用独特的名称</p>
+                    <h2>请输入学员姓名</h2>
+                    <p class="description">姓名将用于游戏内显示和排行榜，每个姓名对应一个游戏角色</p>
                     <div class="input-group">
-                        <input type="text" id="username-input" placeholder="例如：新能源探索者" maxlength="20">
+                        <input type="text" id="username-input" placeholder="例如：汽车小能手" maxlength="20">
                         <button id="username-submit" class="btn-primary">
-                            <i class="fas fa-arrow-right"></i> 开始冒险
+                            <i class="fas fa-arrow-right"></i> 进入学院
                         </button>
                     </div>
                     <div class="tip">
-                        <i class="fas fa-lightbulb"></i> 提示：用户名不能重复，如果重复将覆盖之前的成绩
+                        <i class="fas fa-lightbulb"></i> 提示：如果姓名已存在，将加载该学员的进度和属性
                     </div>
                 </div>
             </div>
@@ -65,31 +65,40 @@
         <div id="main-screen" class="screen">
             <header class="main-header">
                 <div class="logo">
-                    <i class="fas fa-bolt"></i>
-                    <span>智能网联挑战赛</span>
+                    <i class="fas fa-university"></i>
+                    <span>新能源汽车学院</span>
                 </div>
                 <div class="user-info">
-                    <i class="fas fa-user"></i>
-                    <span id="current-username">用户</span>
+                    <div class="user-brief">
+                        <span id="current-username">学员</span>
+                        <div class="user-level">
+                            <span class="level-label">Lv.</span>
+                            <span id="current-level">1</span>
+                        </div>
+                        <div class="user-coins">
+                            <i class="fas fa-coins"></i>
+                            <span id="current-coins">0</span>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <div class="main-content">
                 <div class="welcome-card">
-                    <h1>欢迎回来，<span id="welcome-username">挑战者</span>！</h1>
-                    <p>准备好测试你对新能源汽车智能网联技术的知识了吗？</p>
+                    <h1>欢迎回来，<span id="welcome-username">学员</span>！</h1>
+                    <p>准备好继续你的新能源汽车学习之旅了吗？</p>
                     <div class="stats">
                         <div class="stat">
-                            <i class="fas fa-question-circle"></i>
-                            <span>10道随机题目</span>
+                            <i class="fas fa-brain"></i>
+                            <span>智力: <span id="main-intelligence">0</span></span>
                         </div>
                         <div class="stat">
-                            <i class="fas fa-stopwatch"></i>
-                            <span>计时挑战</span>
+                            <i class="fas fa-fist-raised"></i>
+                            <span>武力: <span id="main-strength">0</span></span>
                         </div>
                         <div class="stat">
-                            <i class="fas fa-trophy"></i>
-                            <span>荣耀排行榜</span>
+                            <i class="fas fa-star"></i>
+                            <span>气质: <span id="main-charm">0</span></span>
                         </div>
                     </div>
                 </div>
@@ -97,29 +106,86 @@
                 <div class="actions">
                     <button id="start-quiz" class="action-card start-card">
                         <div class="action-icon">
-                            <i class="fas fa-play-circle"></i>
+                            <i class="fas fa-book-open"></i>
                         </div>
-                        <h3>开始闯关</h3>
-                        <p>开始答题挑战，测试你的知识水平</p>
+                        <h3>开始学习</h3>
+                        <p>选择课程开始知识挑战</p>
+                    </button>
+
+                    <button id="view-profile" class="action-card profile-card">
+                        <div class="action-icon">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <h3>个人主页</h3>
+                        <p>查看属性和学习记录</p>
                     </button>
 
                     <button id="view-leaderboard" class="action-card leaderboard-card">
                         <div class="action-icon">
                             <i class="fas fa-chart-line"></i>
                         </div>
-                        <h3>查看排行榜</h3>
-                        <p>查看所有挑战者的成绩排名</p>
+                        <h3>排行榜</h3>
+                        <p>查看所有学员排名</p>
+                    </button>
+
+                    <button id="view-shop" class="action-card shop-card">
+                        <div class="action-icon">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <h3>学院商店</h3>
+                        <p>购买道具提升属性</p>
                     </button>
                 </div>
 
                 <div class="info-card">
                     <h3><i class="fas fa-info-circle"></i> 游戏规则</h3>
                     <ul>
-                        <li>每轮挑战包含<strong>10道随机题目</strong>，每题10分</li>
-                        <li>答题时间不限，但总用时会影响排名</li>
-                        <li>得分相同的情况下，<strong>用时更短</strong>的玩家排名更高</li>
-                        <li>排行榜上每个用户名只保留<strong>最佳成绩</strong></li>
+                        <li>每门课程包含<strong>10道随机题目</strong>，每题10分</li>
+                        <li>完成课程可获得<strong>经验、金币和随机属性</strong>奖励</li>
+                        <li>金币可在学院商店购买<strong>智力、武力、气质</strong>道具</li>
+                        <li>积累经验可提升<strong>等级</strong>，解锁更多功能</li>
                     </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 课程选择界面 -->
+        <div id="course-selection-screen" class="screen">
+            <header class="course-header">
+                <button id="back-from-courses" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h1><i class="fas fa-book-open"></i> 选择课程</h1>
+                <div class="header-actions">
+                    <div class="user-stats-mini">
+                        <span><i class="fas fa-coins"></i> <span id="mini-coins">0</span></span>
+                        <span>等级 <span id="mini-level">1</span></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="course-content">
+                <div class="courses-grid" id="courses-grid">
+                    <!-- 课程卡片将通过JS动态生成 -->
+                </div>
+                
+                <div class="course-info">
+                    <h3><i class="fas fa-info-circle"></i> 课程说明</h3>
+                    <p>每门课程包含10道随机题目，完成可获得经验、金币和随机属性奖励。</p>
+                    <div class="reward-info">
+                        <div class="reward-item">
+                            <i class="fas fa-star"></i>
+                            <span>经验值 = 得分</span>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-coins"></i>
+                            <span>金币 = 得分 ÷ 2</span>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-dice"></i>
+                            <span>随机属性 0-3点</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -128,11 +194,11 @@
         <div id="quiz-screen" class="screen">
             <header class="quiz-header">
                 <div class="quiz-header-left">
-                    <button id="back-to-main" class="btn-back">
+                    <button id="back-to-courses" class="btn-back">
                         <i class="fas fa-arrow-left"></i> 返回
                     </button>
                     <div class="quiz-title">
-                        <h2>新能源汽车智能网联挑战</h2>
+                        <h2 id="quiz-course-name">新能源汽车智能网联挑战</h2>
                     </div>
                 </div>
                 <div class="quiz-stats">
@@ -181,7 +247,7 @@
                 <button id="back-from-leaderboard" class="btn-back">
                     <i class="fas fa-arrow-left"></i> 返回
                 </button>
-                <h1><i class="fas fa-crown"></i> 排行榜</h1>
+                <h1><i class="fas fa-crown"></i> 学员排行榜</h1>
                 <div class="header-actions">
                     <button id="refresh-leaderboard" class="btn-secondary">
                         <i class="fas fa-sync-alt"></i> 刷新
@@ -191,11 +257,14 @@
 
             <div class="leaderboard-content">
                 <div class="leaderboard-filters">
-                    <div class="filter-option active" data-filter="all">
-                        <i class="fas fa-list"></i> 全部排名
+                    <div class="filter-option active" data-filter="total">
+                        <i class="fas fa-list"></i> 综合排名
                     </div>
-                    <div class="filter-option" data-filter="top10">
-                        <i class="fas fa-trophy"></i> 前十名
+                    <div class="filter-option" data-filter="level">
+                        <i class="fas fa-level-up-alt"></i> 等级排名
+                    </div>
+                    <div class="filter-option" data-filter="courses">
+                        <i class="fas fa-book"></i> 课程排名
                     </div>
                 </div>
 
@@ -217,6 +286,126 @@
             </div>
         </div>
 
+        <!-- 个人主页界面 -->
+        <div id="profile-screen" class="screen">
+            <header class="profile-header">
+                <button id="back-from-profile" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h1><i class="fas fa-user-circle"></i> 个人主页</h1>
+                <div class="header-actions">
+                    <button id="refresh-profile" class="btn-secondary">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+            </header>
+
+            <div class="profile-content">
+                <div class="profile-card">
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-circle"></i>
+                        <div class="level-badge">Lv.<span id="profile-level">1</span></div>
+                    </div>
+                    <h2 id="profile-username">用户名</h2>
+                    <div class="profile-exp">
+                        <div class="exp-bar">
+                            <div id="exp-progress" class="exp-progress"></div>
+                        </div>
+                        <div class="exp-text">
+                            <span>经验: <span id="current-exp">0</span>/<span id="next-level-exp">100</span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-stats">
+                    <h3><i class="fas fa-chart-line"></i> 学员属性</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <i class="fas fa-coins"></i>
+                            <div>
+                                <div class="stat-name">金币</div>
+                                <div class="stat-value" id="profile-coins">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-brain"></i>
+                            <div>
+                                <div class="stat-name">智力</div>
+                                <div class="stat-value" id="profile-intelligence">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-fist-raised"></i>
+                            <div>
+                                <div class="stat-name">武力</div>
+                                <div class="stat-value" id="profile-strength">0</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-star"></i>
+                            <div>
+                                <div class="stat-name">气质</div>
+                                <div class="stat-value" id="profile-charm">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-courses">
+                    <h3><i class="fas fa-book-open"></i> 课程记录</h3>
+                    <div id="course-progress-list" class="course-list">
+                        <!-- 课程进度将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商店界面 -->
+        <div id="shop-screen" class="screen">
+            <header class="shop-header">
+                <button id="back-from-shop" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <h1><i class="fas fa-store"></i> 学院商店</h1>
+                <div class="header-actions">
+                    <div class="shop-balance">
+                        <i class="fas fa-coins"></i>
+                        <span id="shop-coins">0</span> 金币
+                    </div>
+                </div>
+            </header>
+
+            <div class="shop-content">
+                <div class="shop-category">
+                    <h3><i class="fas fa-brain"></i> 智力道具</h3>
+                    <div class="items-grid" id="intelligence-items">
+                        <!-- 智力道具将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="shop-category">
+                    <h3><i class="fas fa-fist-raised"></i> 武力道具</h3>
+                    <div class="items-grid" id="strength-items">
+                        <!-- 武力道具将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="shop-category">
+                    <h3><i class="fas fa-star"></i> 气质道具</h3>
+                    <div class="items-grid" id="charm-items">
+                        <!-- 气质道具将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="shop-category">
+                    <h3><i class="fas fa-gift"></i> 特殊道具</h3>
+                    <div class="items-grid" id="special-items">
+                        <!-- 特殊道具将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 结果界面 -->
         <div id="result-screen" class="screen">
             <div class="result-container">
@@ -224,7 +413,7 @@
                     <div class="result-icon">
                         <i class="fas fa-award"></i>
                     </div>
-                    <h1>挑战完成！</h1>
+                    <h1>课程完成！</h1>
                     <p id="result-message">你的成绩已经记录</p>
                 </div>
 
@@ -245,6 +434,37 @@
                         <div class="stat-circle rank-circle">
                             <span id="final-rank" class="stat-number">5</span>
                             <span class="stat-label">排名</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-rewards">
+                    <h3><i class="fas fa-gift"></i> 本次挑战奖励</h3>
+                    <div class="rewards-grid">
+                        <div class="reward-item">
+                            <i class="fas fa-star"></i>
+                            <div class="reward-value" id="reward-exp">0</div>
+                            <div class="reward-label">经验值</div>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-coins"></i>
+                            <div class="reward-value" id="reward-coins">0</div>
+                            <div class="reward-label">金币</div>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-brain"></i>
+                            <div class="reward-value" id="reward-intelligence">0</div>
+                            <div class="reward-label">智力</div>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-fist-raised"></i>
+                            <div class="reward-value" id="reward-strength">0</div>
+                            <div class="reward-label">武力</div>
+                        </div>
+                        <div class="reward-item">
+                            <i class="fas fa-star"></i>
+                            <div class="reward-value" id="reward-charm">0</div>
+                            <div class="reward-label">气质</div>
                         </div>
                     </div>
                 </div>
@@ -279,6 +499,9 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+<script src="script.js"></script>
+<script src="profile.js"></script>
+<script src="courses.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

@@ -16,6 +16,10 @@
     --ink-brown-light: #5c4a37;
     --border-radius: 8px;
     --transition: all 0.3s ease;
+    --intelligence-color: #4a90e2;
+    --strength-color: #e24a4a;
+    --charm-color: #e2b14a;
+    --coins-color: #f0b400;
 }
 
 body {
@@ -264,11 +268,41 @@ body::before {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.user-brief {
+    display: flex;
+    align-items: center;
+    gap: 15px;
     background-color: var(--parchment-medium);
     padding: 12px 20px;
     border-radius: var(--border-radius);
     border: 1px solid var(--parchment-dark);
     color: var(--ink-brown);
+}
+
+.user-level {
+    background-color: var(--accent-gold);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.level-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.user-coins {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--coins-color);
+    font-weight: 700;
 }
 
 .welcome-card {
@@ -313,12 +347,23 @@ body::before {
 
 .stat i {
     font-size: 2.5rem;
-    color: var(--accent-gold);
+}
+
+.stat:nth-child(1) i {
+    color: var(--intelligence-color);
+}
+
+.stat:nth-child(2) i {
+    color: var(--strength-color);
+}
+
+.stat:nth-child(3) i {
+    color: var(--charm-color);
 }
 
 .actions {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 30px;
     margin-bottom: 40px;
 }
@@ -420,6 +465,174 @@ body::before {
 .info-card strong {
     color: var(--ink-brown);
     font-weight: 600;
+}
+
+/* 课程选择界面 */
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    color: var(--ink-brown);
+}
+
+.course-header h1 {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 700;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-stats-mini {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: var(--parchment-medium);
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--parchment-dark);
+    color: var(--ink-brown);
+    font-weight: 600;
+}
+
+.user-stats-mini span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.user-stats-mini i {
+    color: var(--coins-color);
+}
+
+.course-content {
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    border: 1px solid var(--parchment-dark);
+    box-shadow: 
+        0 2px 10px rgba(62, 44, 26, 0.1),
+        inset 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.course-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 25px;
+    border: 1px solid var(--parchment-dark);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(62, 44, 26, 0.15);
+    border-color: var(--accent-gold);
+}
+
+.course-icon {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    color: var(--accent-gold);
+}
+
+.course-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: var(--ink-brown);
+    font-weight: 700;
+}
+
+.course-description {
+    color: var(--ink-brown-light);
+    font-size: 1rem;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.course-progress {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--parchment-medium);
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+    color: var(--ink-brown-light);
+}
+
+.progress-bar {
+    height: 6px;
+    background-color: var(--parchment-medium);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--accent-gold);
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.course-info {
+    background-color: var(--parchment-medium);
+    border-radius: var(--border-radius);
+    padding: 25px;
+    border: 1px solid var(--parchment-dark);
+}
+
+.course-info h3 {
+    color: var(--ink-brown);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+}
+
+.course-info p {
+    color: var(--ink-brown-light);
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.reward-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.reward-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink-brown);
+}
+
+.reward-item i {
+    color: var(--accent-gold);
+    width: 20px;
 }
 
 /* 答题界面样式 */
@@ -691,6 +904,395 @@ body::before {
     border: 1px solid var(--parchment-dark);
 }
 
+/* 个人主页样式 */
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    color: var(--ink-brown);
+}
+
+.profile-header h1 {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 700;
+}
+
+.profile-content {
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    border: 1px solid var(--parchment-dark);
+    box-shadow: 
+        0 2px 10px rgba(62, 44, 26, 0.1),
+        inset 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.profile-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 30px;
+    border: 1px solid var(--parchment-dark);
+}
+
+.profile-avatar {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.profile-avatar i {
+    font-size: 8rem;
+    color: var(--accent-gold);
+}
+
+.level-badge {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: var(--accent-gold);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.profile-card h2 {
+    font-size: 2rem;
+    color: var(--ink-brown);
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+.profile-exp {
+    margin-top: 20px;
+}
+
+.exp-bar {
+    height: 10px;
+    background-color: var(--parchment-medium);
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.exp-progress {
+    height: 100%;
+    background-color: var(--accent-gold);
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.exp-text {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-brown-light);
+    font-size: 0.95rem;
+}
+
+.profile-stats {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    margin-bottom: 30px;
+    border: 1px solid var(--parchment-dark);
+}
+
+.profile-stats h3 {
+    color: var(--ink-brown);
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--parchment-dark);
+    padding-bottom: 10px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--parchment-dark);
+    transition: var(--transition);
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 3px 10px rgba(62, 44, 26, 0.1);
+    border-color: var(--accent-gold);
+}
+
+.stat-item i {
+    font-size: 2.5rem;
+    width: 50px;
+    text-align: center;
+}
+
+.stat-item:nth-child(1) i {
+    color: var(--coins-color);
+}
+
+.stat-item:nth-child(2) i {
+    color: var(--intelligence-color);
+}
+
+.stat-item:nth-child(3) i {
+    color: var(--strength-color);
+}
+
+.stat-item:nth-child(4) i {
+    color: var(--charm-color);
+}
+
+.stat-name {
+    font-size: 0.95rem;
+    color: var(--ink-brown-light);
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--ink-brown);
+}
+
+.profile-courses {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    border: 1px solid var(--parchment-dark);
+}
+
+.profile-courses h3 {
+    color: var(--ink-brown);
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--parchment-dark);
+    padding-bottom: 10px;
+}
+
+.course-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.course-record {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--parchment-dark);
+}
+
+.course-name {
+    font-weight: 600;
+    color: var(--ink-brown);
+}
+
+.course-score {
+    font-weight: 700;
+    color: var(--accent-gold);
+    font-size: 1.2rem;
+}
+
+.course-attempts {
+    color: var(--ink-brown-light);
+    font-size: 0.9rem;
+}
+
+/* 商店样式 */
+.shop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    color: var(--ink-brown);
+}
+
+.shop-header h1 {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 700;
+}
+
+.shop-balance {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--parchment-medium);
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--parchment-dark);
+    color: var(--ink-brown);
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.shop-balance i {
+    color: var(--coins-color);
+}
+
+.shop-content {
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    border: 1px solid var(--parchment-dark);
+    box-shadow: 
+        0 2px 10px rgba(62, 44, 26, 0.1),
+        inset 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+.shop-category {
+    margin-bottom: 40px;
+}
+
+.shop-category:last-child {
+    margin-bottom: 0;
+}
+
+.shop-category h3 {
+    color: var(--ink-brown);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--parchment-dark);
+    padding-bottom: 10px;
+}
+
+.shop-category:nth-child(1) h3 i {
+    color: var(--intelligence-color);
+}
+
+.shop-category:nth-child(2) h3 i {
+    color: var(--strength-color);
+}
+
+.shop-category:nth-child(3) h3 i {
+    color: var(--charm-color);
+}
+
+.shop-category:nth-child(4) h3 i {
+    color: var(--accent-gold);
+}
+
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.shop-item {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    border: 1px solid var(--parchment-dark);
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.shop-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(62, 44, 26, 0.15);
+    border-color: var(--accent-gold);
+}
+
+.shop-item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.shop-item.disabled:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--parchment-dark);
+}
+
+.item-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.intelligence-item .item-icon {
+    color: var(--intelligence-color);
+}
+
+.strength-item .item-icon {
+    color: var(--strength-color);
+}
+
+.charm-item .item-icon {
+    color: var(--charm-color);
+}
+
+.special-item .item-icon {
+    color: var(--accent-gold);
+}
+
+.shop-item h4 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    color: var(--ink-brown);
+    font-weight: 700;
+}
+
+.item-description {
+    color: var(--ink-brown-light);
+    font-size: 0.95rem;
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.item-price {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--coins-color);
+    font-weight: 700;
+    font-size: 1.2rem;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--parchment-medium);
+}
+
+.item-effect {
+    color: var(--ink-brown);
+    font-weight: 600;
+    margin-top: 10px;
+    font-size: 1rem;
+}
+
 /* 结果界面样式 */
 .result-container {
     background-color: var(--parchment-light);
@@ -790,6 +1392,79 @@ body::before {
     font-style: italic;
 }
 
+.result-rewards {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 30px;
+    margin-bottom: 40px;
+    border: 1px solid var(--parchment-dark);
+}
+
+.result-rewards h3 {
+    color: var(--ink-brown);
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    text-align: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--parchment-dark);
+    padding-bottom: 10px;
+}
+
+.rewards-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+}
+
+.reward-item {
+    text-align: center;
+    padding: 15px;
+    background-color: var(--parchment-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--parchment-dark);
+}
+
+.reward-item i {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.reward-item:nth-child(1) i {
+    color: var(--accent-gold);
+}
+
+.reward-item:nth-child(2) i {
+    color: var(--coins-color);
+}
+
+.reward-item:nth-child(3) i {
+    color: var(--intelligence-color);
+}
+
+.reward-item:nth-child(4) i {
+    color: var(--strength-color);
+}
+
+.reward-item:nth-child(5) i {
+    color: var(--charm-color);
+}
+
+.reward-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--ink-brown);
+    margin-bottom: 5px;
+}
+
+.reward-label {
+    font-size: 0.9rem;
+    color: var(--ink-brown-light);
+}
+
 .result-actions {
     display: flex;
     justify-content: center;
@@ -863,132 +1538,6 @@ body::before {
     font-style: italic;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-    .header h1 {
-        font-size: 2rem;
-    }
-    
-    .subtitle {
-        font-size: 1rem;
-    }
-    
-    .card {
-        padding: 20px;
-        margin: 20px auto;
-    }
-    
-    .input-group {
-        flex-direction: column;
-    }
-    
-    .actions {
-        grid-template-columns: 1fr;
-    }
-    
-    .stats {
-        flex-direction: column;
-        gap: 20px;
-    }
-    
-    .quiz-header {
-        flex-direction: column;
-        gap: 20px;
-        align-items: flex-start;
-    }
-    
-    .quiz-stats {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .quiz-navigation {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .result-stats {
-        flex-direction: column;
-        align-items: center;
-        gap: 30px;
-    }
-    
-    .result-actions {
-        flex-direction: column;
-    }
-    
-    .leaderboard-header {
-        flex-direction: column;
-        gap: 20px;
-        align-items: flex-start;
-    }
-    
-    .leaderboard-filters {
-        flex-wrap: wrap;
-    }
-}
-
-/* 装饰性元素 */
-.tip {
-    background-color: rgba(184, 148, 90, 0.1);
-    border-left: 4px solid var(--accent-gold);
-    padding: 15px;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    margin-top: 25px;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 1px solid rgba(184, 148, 90, 0.2);
-    color: var(--ink-brown);
-}
-
-.description {
-    color: var(--ink-brown-light);
-    margin-bottom: 20px;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    font-style: italic;
-}
-
-/* 古风装饰线 */
-.decorative-line {
-    height: 1px;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        var(--accent-gold) 20%, 
-        var(--accent-gold) 80%, 
-        transparent 100%);
-    margin: 30px 0;
-}
-
-/* 卷轴效果 */
-.scroll-effect {
-    position: relative;
-}
-
-.scroll-effect::before,
-.scroll-effect::after {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 100%;
-    background-color: var(--parchment-medium);
-    border: 1px solid var(--parchment-dark);
-    z-index: 1;
-}
-
-.scroll-effect::before {
-    left: -10px;
-    border-radius: 10px 0 0 10px;
-    border-right: none;
-}
-
-.scroll-effect::after {
-    right: -10px;
-    border-radius: 0 10px 10px 0;
-    border-left: none;
-}
 /* AI赞扬弹窗样式 */
 .ai-modal {
     position: fixed;
@@ -1108,4 +1657,149 @@ body::before {
 
 #ai-modal-close-btn {
     min-width: 150px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .header h1 {
+        font-size: 2rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
+    .card {
+        padding: 20px;
+        margin: 20px auto;
+    }
+    
+    .input-group {
+        flex-direction: column;
+    }
+    
+    .actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .quiz-header {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    .quiz-stats {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .quiz-navigation {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .result-stats {
+        flex-direction: column;
+        align-items: center;
+        gap: 30px;
+    }
+    
+    .result-actions {
+        flex-direction: column;
+    }
+    
+    .leaderboard-header {
+        flex-direction: column;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    .leaderboard-filters {
+        flex-wrap: wrap;
+    }
+    
+    .rewards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .courses-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .items-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 装饰性元素 */
+.tip {
+    background-color: rgba(184, 148, 90, 0.1);
+    border-left: 4px solid var(--accent-gold);
+    padding: 15px;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    margin-top: 25px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(184, 148, 90, 0.2);
+    color: var(--ink-brown);
+}
+
+.description {
+    color: var(--ink-brown-light);
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+/* 古风装饰线 */
+.decorative-line {
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--accent-gold) 20%, 
+        var(--accent-gold) 80%, 
+        transparent 100%);
+    margin: 30px 0;
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--ink-brown-light);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: var(--parchment-dark);
+}
+
+.empty-state h3 {
+    color: var(--ink-brown);
+    margin-bottom: 10px;
+}
+
+.error-message {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--ink-brown-light);
+}
+
+.error-message i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: var(--strength-color);
 }
